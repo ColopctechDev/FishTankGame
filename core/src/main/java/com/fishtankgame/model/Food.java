@@ -1,5 +1,7 @@
 package com.fishtankgame.model;
 
+import java.util.Objects;
+
 public class Food {
     private String type;
     private int growthBoost;
@@ -21,5 +23,18 @@ public class Food {
 
     public double getPrice() {
         return price;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Food food = (Food) o;
+        return Objects.equals(type, food.type);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(type);
     }
 }

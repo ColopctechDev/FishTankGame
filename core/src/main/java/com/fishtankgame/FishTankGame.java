@@ -33,15 +33,16 @@ public class FishTankGame extends Game {
     @Override
     public void create() {
         batch = new SpriteBatch();
-        gameManager = new GameManager();
-        shop = new Shop(gameManager);
 
         // Load assets
         background = new Texture("background.png");
         bubbleTexture = new Texture("bubble.png");
         waterSound = com.badlogic.gdx.Gdx.audio.newSound(com.badlogic.gdx.Gdx.files.internal("water_sound.wav"));
-        blueTangTexture = new Texture("Fish1.png");
-        goldfishTexture = new Texture("Fish2.png");
+        blueTangTexture = new Texture("Bluetang.png"); // Updated filename
+        goldfishTexture = new Texture("Goldfish.png"); // Updated filename
+
+        gameManager = new GameManager(bubbleTexture);
+        shop = new Shop(gameManager);
 
         // Add fish textures to GameManager
         gameManager.addFishTexture("Blue Tang", blueTangTexture);
@@ -55,11 +56,12 @@ public class FishTankGame extends Game {
         }
 
         // Create initial fish
-        gameManager.getFishList().add(new Fish("Dory", "Blue Tang", 15.0, 1.5f, blueTangTexture));
-        gameManager.getFishList().add(new Fish("Nemo", "Goldfish", 10.0, 1.0f, goldfishTexture));
+        gameManager.getFishList().add(new Fish("Dory", "Blue Tang", 15.0, 1.0f, blueTangTexture, 100));
+        gameManager.getFishList().add(new Fish("Marlin", "Goldfish", 10.0, 0.8f, goldfishTexture, 80));
+        gameManager.getFishList().add(new Fish("Nemo", "Goldfish", 10.0, 0.8f, goldfishTexture, 80));
 
         // Create screens
-        gameScreen = new GameScreen(this, gameManager, batch, bubbles, background);
+        gameScreen = new GameScreen(this, gameManager, shop, batch, bubbles, background);
         shopScreen = new ShopScreen(this, shop, gameManager);
 
         // Set the initial screen

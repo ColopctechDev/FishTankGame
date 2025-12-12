@@ -21,14 +21,16 @@ public class Shop {
     public void buyFood(Food food) {
         if (gameManager.getMoney() >= food.getPrice()) {
             gameManager.setMoney(gameManager.getMoney() - food.getPrice());
-            gameManager.getFoodList().add(food);
+            gameManager.addFood(food, 5); // Add a pack of 5
         }
     }
 
-    public void sellFish(Fish fish) {
+    public Fish sellFish(Fish fish) {
         if (fish.isAdult()) {
             gameManager.setMoney(gameManager.getMoney() + fish.getPrice());
             gameManager.getFishList().remove(fish);
+            return fish;
         }
+        return null;
     }
 }
