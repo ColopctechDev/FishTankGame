@@ -1,13 +1,15 @@
 package com.fishtankgame;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.fishtankgame.effects.Bubble;
 import com.fishtankgame.game.GameManager;
 import com.fishtankgame.game.Shop;
-import com.fishtankgame.model.Fish;
 import com.fishtankgame.ui.GameScreen;
 import com.fishtankgame.ui.ShopScreen;
 
@@ -15,97 +17,118 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FishTankGame extends Game {
-    public static final float VIRTUAL_WIDTH = 1280;
-    public static final float VIRTUAL_HEIGHT = 720;
+    public static final float VIRTUAL_WIDTH = 1920;
+    public static final float VIRTUAL_HEIGHT = 1080;
 
     private SpriteBatch batch;
     private GameManager gameManager;
     private Shop shop;
-
     private GameScreen gameScreen;
     private ShopScreen shopScreen;
+    private Skin skin;
 
-    // Assets
     private Texture background;
-    private Texture bubbleTexture;
-    private Sound waterSound;
-    private Texture blueTangTexture;
-    private Texture goldfishTexture;
-    private Texture angelfishTexture;
-    private Texture betafishTexture;
-    private Texture clownfishTexture;
-    private Texture tigerfishTexture;
     private List<Bubble> bubbles;
+    private List<Texture> texturesToDispose;
+
+    private Sound waterAmbient;
+    private long waterAmbientId = -1;
+
+    private Sound bubblerSound;
+    private long bubblerSoundId = -1;
 
     @Override
     public void create() {
         batch = new SpriteBatch();
+        texturesToDispose = new ArrayList<>();
+        skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
 
-        // Load assets
-        background = new Texture("background.png");
-        bubbleTexture = new Texture("bubble.png");
-        waterSound = com.badlogic.gdx.Gdx.audio.newSound(com.badlogic.gdx.Gdx.files.internal("water_sound.wav"));
-        blueTangTexture = new Texture("Bluetang.png");
-        goldfishTexture = new Texture("Goldfish.png");
-        angelfishTexture = new Texture("Angelfish.png");
-        betafishTexture = new Texture("Betafish.png");
-        clownfishTexture = new Texture("Clownfish.png");
-        tigerfishTexture = new Texture("Tigerfish.png");
-
+        Texture bubbleTexture = loadTexture("bubble.png");
         gameManager = new GameManager(bubbleTexture);
         shop = new Shop(gameManager);
 
-        // Add fish textures to GameManager
-        gameManager.addFishTexture("Blue Tang", blueTangTexture);
-        gameManager.addFishTexture("Goldfish", goldfishTexture);
-        gameManager.addFishTexture("Angelfish", angelfishTexture);
-        gameManager.addFishTexture("Betafish", betafishTexture);
-        gameManager.addFishTexture("Clownfish", clownfishTexture);
-        gameManager.addFishTexture("Tigerfish", tigerfishTexture);
+        background = loadTexture("background.png");
 
-        waterSound.loop();
+        // Load Sounds
+        waterAmbient = Gdx.audio.newSound(Gdx.files.internal("sounds/water_sound.wav"));
+        bubblerSound = Gdx.audio.newSound(Gdx.files.internal("sounds/bubbler.wav"));
+
+        // Load Fish Textures
+        gameManager.addFishTexture("Goldfish", loadTexture("fish/Goldfish.png"));
+        gameManager.addFishTexture("Blue Tang", loadTexture("fish/Bluetang.png"));
+        gameManager.addFishTexture("Angelfish", loadTexture("fish/Angelfish.png"));
+        gameManager.addFishTexture("Betafish", loadTexture("fish/Betafish.png"));
+        gameManager.addFishTexture("Clownfish", loadTexture("fish/Clownfish.png"));
+        gameManager.addFishTexture("Tigerfish", loadTexture("fish/Tigerfish.png"));
+
+        // Load Decor Textures
+        gameManager.initDecor(
+                loadTexture("decor/chest.png"),
+                loadTexture("decor/bubbler.png"),
+                loadTexture("decor/plant1.png"),
+                loadTexture("decor/plant2.png"),
+                loadTexture("decor/plant3.png"),
+                loadTexture("decor/plant4.png")
+        );
 
         bubbles = new ArrayList<>();
-        for (int i = 0; i < 50; i++) {
-            bubbles.add(new Bubble(bubbleTexture));
+        for (int i = 0; i < 20; i++) {
+            float x = MathUtils.random(0, VIRTUAL_WIDTH);
+            float y = MathUtils.random(-VIRTUAL_HEIGHT, VIRTUAL_HEIGHT);
+            bubbles.add(new Bubble(bubbleTexture, x, y, VIRTUAL_HEIGHT));
         }
 
-        // Create initial fish for testing
-        gameManager.getFishList().add(new Fish("Goldie", "Goldfish", 10.0, 0.8f, goldfishTexture, 80, gameManager));
-        gameManager.getFishList().add(new Fish("Dory", "Blue Tang", 15.0, 1.0f, blueTangTexture, 100, gameManager));
-        gameManager.getFishList().add(new Fish("Angel", "Angelfish", 20.0, 0.9f, angelfishTexture, 120, gameManager));
-        gameManager.getFishList().add(new Fish("Beta", "Betafish", 25.0, 1.2f, betafishTexture, 150, gameManager));
-        gameManager.getFishList().add(new Fish("Nemo", "Clownfish", 30.0, 1.1f, clownfishTexture, 180, gameManager));
-        gameManager.getFishList().add(new Fish("Tigger", "Tigerfish", 50.0, 1.8f, tigerfishTexture, 250, gameManager));
+        gameScreen = new GameScreen(this, gameManager, shop, batch, bubbles, background, skin);
+        shopScreen = new ShopScreen(this, shop, gameManager, skin);
 
-        // Create screens
-        gameScreen = new GameScreen(this, gameManager, shop, batch, bubbles, background);
-        shopScreen = new ShopScreen(this, shop, gameManager);
+        // Start background ambient sound immediately
+        startAmbientSound();
 
-        // Set the initial screen
         setScreen(gameScreen);
     }
 
-    public void showGameScreen() {
-        setScreen(gameScreen);
+    private Texture loadTexture(String path) {
+        Texture tex = new Texture(path);
+        texturesToDispose.add(tex);
+        return tex;
+    }
+
+    public void startAmbientSound() {
+        if (waterAmbientId == -1) {
+            waterAmbientId = waterAmbient.loop(0.15f); // Very low background hum
+        }
+    }
+
+    public void startBubblerSound() {
+        if (bubblerSoundId == -1) {
+            bubblerSoundId = bubblerSound.loop(0.35f); // Louder bubbling effect
+        }
+    }
+
+    public void stopBubblerSound() {
+        if (bubblerSoundId != -1) {
+            bubblerSound.stop(bubblerSoundId);
+            bubblerSoundId = -1;
+        }
     }
 
     public void showShopScreen() {
         setScreen(shopScreen);
     }
 
+    public void showGameScreen() {
+        setScreen(gameScreen);
+    }
+
     @Override
     public void dispose() {
         batch.dispose();
-        background.dispose();
-        bubbleTexture.dispose();
-        waterSound.dispose();
-        blueTangTexture.dispose();
-        goldfishTexture.dispose();
-        angelfishTexture.dispose();
-        betafishTexture.dispose();
-        clownfishTexture.dispose();
-        tigerfishTexture.dispose();
+        skin.dispose();
+        for (Texture tex : texturesToDispose) {
+            tex.dispose();
+        }
+        waterAmbient.dispose();
+        bubblerSound.dispose();
         gameScreen.dispose();
         shopScreen.dispose();
     }

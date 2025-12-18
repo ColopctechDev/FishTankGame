@@ -39,7 +39,14 @@ public class Fish {
     private float maxScale = 0.1f;
     private float currentScale;
 
+    private boolean lastFlipX = false;
+    private boolean isBehindDecor = false;
+
     public Fish(String name, String breed, double price, float speed, Texture texture, int maxFillValue, GameManager gameManager) {
+        this(name, breed, price, speed, texture, maxFillValue, gameManager, null);
+    }
+
+    public Fish(String name, String breed, double price, float speed, Texture texture, int maxFillValue, GameManager gameManager, Vector2 spawnPosition) {
         this.name = name;
         this.breed = breed;
         this.fillValue = 0;
@@ -54,10 +61,17 @@ public class Fish {
         float scaledWidth = texture.getWidth() * currentScale;
         float scaledHeight = texture.getHeight() * currentScale;
 
-        this.position = new Vector2(MathUtils.random(0, gameManager.getTankWidth() - scaledWidth), MathUtils.random(0, gameManager.getTankHeight() - scaledHeight));
+        if (spawnPosition != null) {
+            this.position = new Vector2(spawnPosition.x, spawnPosition.y);
+        } else {
+            this.position = new Vector2(MathUtils.random(0, gameManager.getTankWidth() - scaledWidth), MathUtils.random(0, gameManager.getTankHeight() - scaledHeight));
+        }
+
         this.direction = new Vector2(MathUtils.random(-1f, 1f), MathUtils.random(-1f, 1f)).nor();
+        if (direction.len() == 0) direction.set(1, 0);
         this.bounds = new Rectangle(position.x, position.y, scaledWidth, scaledHeight);
         this.schoolingOffset = new Vector2(MathUtils.random(-100, 100), MathUtils.random(-100, 100));
+        this.lastFlipX = direction.x < 0;
     }
 
     public void update(float delta) {
@@ -68,95 +82,103 @@ public class Fish {
             fightTimer -= delta;
         }
 
-        boolean isAvoidingWall = false;
         float scaledWidth = textureRegion.getRegionWidth() * currentScale;
         float scaledHeight = textureRegion.getRegionHeight() * currentScale;
-        float margin = 20f;
+        float margin = 40f;
 
-        // --- Wall Collision ---
-        float angle = direction.angleDeg();
-        float snappedAngle = Math.round(angle / 45) * 45;
-        float collisionWidth = scaledWidth;
-        float collisionHeight = scaledHeight;
-
-        if (snappedAngle % 90 != 0) { // is diagonal
-            float rad = MathUtils.degreesToRadians * 45;
-            collisionWidth = (scaledWidth * MathUtils.cos(rad) + scaledHeight * MathUtils.sin(rad));
-            collisionHeight = (scaledWidth * MathUtils.sin(rad) + scaledHeight * MathUtils.cos(rad));
+        // --- Robust Wall Collision ---
+        boolean isCollidingWall = false;
+        if (position.x < margin) {
+            position.x = margin;
+            direction.x = Math.abs(direction.x);
+            if (direction.x < 0.3f) direction.x = 0.5f;
+            isCollidingWall = true;
+        } else if (position.x + scaledWidth > gameManager.getTankWidth() - margin) {
+            position.x = gameManager.getTankWidth() - margin - scaledWidth;
+            direction.x = -Math.abs(direction.x);
+            if (direction.x > -0.3f) direction.x = -0.5f;
+            isCollidingWall = true;
         }
 
-        float centerX = position.x + scaledWidth / 2;
-        float centerY = position.y + scaledHeight / 2;
-        float halfCollisionWidth = collisionWidth / 2;
-        float halfCollisionHeight = collisionHeight / 2;
-
-        if (centerX - halfCollisionWidth < margin && direction.x < 0) {
-            direction.x = -direction.x;
-            isAvoidingWall = true;
-        } else if (centerX + halfCollisionWidth > gameManager.getTankWidth() - margin && direction.x > 0) {
-            direction.x = -direction.x;
-            isAvoidingWall = true;
+        if (position.y < margin) {
+            position.y = margin;
+            direction.y = Math.abs(direction.y);
+            if (direction.y < 0.3f) direction.y = 0.5f;
+            isCollidingWall = true;
+        } else if (position.y + scaledHeight > gameManager.getTankHeight() - margin) {
+            position.y = gameManager.getTankHeight() - margin - scaledHeight;
+            direction.y = -Math.abs(direction.y);
+            if (direction.y > -0.3f) direction.y = -0.5f;
+            isCollidingWall = true;
         }
 
-        if (centerY - halfCollisionHeight < margin && direction.y < 0) {
-            direction.y = -direction.y;
-            isAvoidingWall = true;
-        } else if (centerY + halfCollisionHeight > gameManager.getTankHeight() - margin && direction.y > 0) {
-            direction.y = -direction.y;
-            isAvoidingWall = true;
+        if (isCollidingWall) {
+            direction.nor();
+            isGuardingEgg = false;
         }
 
-        if (!isAvoidingWall) {
+        if (!isCollidingWall) {
             // Priority 1: Actions with targets
             if (targetFood != null) {
                 direction.set(new Vector2(targetFood.getBounds().x, targetFood.getBounds().y).sub(position)).nor();
                 isGuardingEgg = false;
             } else if (targetFish != null) {
                 Vector2 targetPosition = new Vector2(targetFish.getBounds().x, targetFish.getBounds().y);
-                if (isFighting() && position.dst(targetPosition) < 30) {
+                float dist = position.dst(targetPosition);
+                if (isFighting() && dist < 30) {
                     startFightTimer();
                     patrolAngle += delta * 20;
                     direction.x = MathUtils.sin(patrolAngle);
-                } else if (position.dst(targetPosition) < 20 && !isFighting()) {
+                } else if (dist < 20 && !isFighting()) {
                     clearTargetFish();
                     chaseCooldown = MathUtils.random(3f, 10f);
-                } else {
-                    direction.set(targetPosition.sub(position)).nor();
+                } else if (dist > 5) {
+                    direction.set(targetPosition.cpy().sub(position)).nor();
                 }
                 isGuardingEgg = false;
             } else if (targetEgg != null) {
                 Vector2 targetPosition = targetEgg.getPosition();
+                float dist = position.dst(targetPosition);
+
                 if (breed.equals("Angelfish") && isAdult()) {
-                    if (position.dst(targetPosition) > 15 && !isGuardingEgg) {
+                    if (dist > 15 && !isGuardingEgg) {
                         direction.set(targetPosition.cpy().sub(position)).nor();
                     } else {
                         isGuardingEgg = true;
                         if (targetEgg.isFalling()) {
-                            // Fall with egg, face same direction
-                            position.y = targetPosition.y - (bounds.height / 2) + 8;
-                            float targetX = targetPosition.x - (bounds.width / 2) + 8;
-                            if (Math.abs(position.x - targetX) > 2) {
-                                position.x += (targetX - position.x) * delta * 5;
-                            }
-                            direction.y = 0; // Maintain horizontal face
-                        } else {
-                            // At bottom, move slowly back and forth 20px
-                            patrolAngle += delta * 2;
-                            float cX = targetPosition.x - (bounds.width / 2) + 8;
-                            float oldX = position.x;
-                            position.x = cX + MathUtils.sin(patrolAngle) * 20;
-                            position.y = targetPosition.y - (bounds.height / 2) + 8;
+                            float targetY = targetPosition.y - (scaledHeight / 2) + 32;
+                            position.y = MathUtils.clamp(targetY, margin, gameManager.getTankHeight() - margin - scaledHeight);
 
-                            if (position.x > oldX) direction.x = 1;
-                            else if (position.x < oldX) direction.x = -1;
+                            float targetX = targetPosition.x - (scaledWidth / 2) + 32;
+                            float clampedTargetX = MathUtils.clamp(targetX, margin, gameManager.getTankWidth() - margin - scaledWidth);
+
+                            if (Math.abs(position.x - clampedTargetX) > 2) {
+                                position.x += (clampedTargetX - position.x) * delta * 5;
+                                direction.x = (clampedTargetX > position.x) ? 1 : -1;
+                            }
+                            direction.y = 0;
+                        } else {
+                            patrolAngle += delta * 2;
+                            float cX = targetPosition.x - (scaledWidth / 2) + 32;
+                            float oldX = position.x;
+
+                            float targetX = cX + MathUtils.sin(patrolAngle) * 20;
+                            position.x = MathUtils.clamp(targetX, margin, gameManager.getTankWidth() - margin - scaledWidth);
+
+                            float targetY = targetPosition.y - (scaledHeight / 2) + 32;
+                            position.y = MathUtils.clamp(targetY, margin, gameManager.getTankHeight() - margin - scaledHeight);
+
+                            if (position.x > oldX + 0.5f) direction.x = 1;
+                            else if (position.x < oldX - 0.5f) direction.x = -1;
                             direction.y = 0;
                         }
                     }
                 } else {
-                    if (position.dst(targetPosition) > 25) {
+                    if (dist > 25) {
                         direction.set(targetPosition.cpy().sub(position)).nor();
                         isGuardingEgg = false;
                     } else {
+                        // All non-angel fish just circle the egg
                         patrolAngle += delta * 4;
                         direction.x = MathUtils.sin(patrolAngle);
                         direction.y = MathUtils.cos(patrolAngle) * 0.2f;
@@ -165,19 +187,38 @@ public class Fish {
                 }
             } else if (schoolingLeader != null) {
                 Vector2 targetPosition = new Vector2(schoolingLeader.position).add(schoolingOffset);
-                direction.set(targetPosition.sub(position)).nor();
+                float dist = position.dst(targetPosition);
+                if (dist > 15) {
+                    direction.set(targetPosition.sub(position)).nor();
+                } else {
+                    direction.set(schoolingLeader.direction).nor();
+                }
                 isGuardingEgg = false;
             } else {
                 isGuardingEgg = false;
                 // Priority 2: Idle behaviors
                 if (breed.equals("Tigerfish") && isAdult()) {
-                    handleTigerfishPatrol(delta, scaledWidth, scaledHeight);
+                    handleTigerfishPatrol(delta, scaledWidth, scaledHeight, margin);
+                } else if (breed.equals("Clownfish") && isAdult()) {
+                    handleClownfishPatrol(delta, scaledWidth, scaledHeight, margin);
+                } else if (breed.equals("Angelfish") && isAdult()) {
+                    handleAngelfishPatrol(delta, scaledWidth, scaledHeight, margin);
+                } else if (breed.equals("Goldfish") && isAdult()) {
+                    handleGoldfishPatrol(delta, scaledWidth, scaledHeight, margin);
                 } else {
-                    // Default wandering for other fish or non-adult tigerfish
+                    // Default wandering
                     wanderTimer -= delta;
                     if (wanderTimer <= 0) {
-                        wanderTimer = MathUtils.random(2f, 6f);
-                        direction.rotateDeg(MathUtils.random(-60f, 60f));
+                        wanderTimer = MathUtils.random(3f, 8f);
+                        direction.rotateDeg(MathUtils.random(-45f, 45f));
+
+                        if (position.y < gameManager.getTankHeight() * 0.3f) {
+                            direction.y += 0.5f;
+                        }
+                        if (position.y > gameManager.getTankHeight() * 0.7f) {
+                            direction.y -= 0.3f;
+                        }
+                        direction.nor();
                     }
                 }
             }
@@ -188,22 +229,24 @@ public class Fish {
             currentSpeed *= 2;
         }
         if (isLeader) {
-            currentSpeed *= 1.05f;
+            currentSpeed *= 1.1f;
         }
         if (isGuardingEgg) {
             currentSpeed = 0;
         }
 
-        // Apply movement using delta for frame-rate independence (normalized to ~60fps)
-        position.add(direction.cpy().nor().scl(currentSpeed * delta * 60));
+        // Apply movement
+        if (direction.len() > 0) {
+            position.add(direction.cpy().nor().scl(currentSpeed * delta * 60));
+        }
 
-        // --- Update Bounds after moving ---
+        // --- Update Bounds ---
         float finalAngle = direction.angleDeg();
         float finalSnappedAngle = Math.round(finalAngle / 45) * 45;
         float finalCollisionWidth = scaledWidth;
         float finalCollisionHeight = scaledHeight;
 
-        if (finalSnappedAngle % 90 != 0) { // is diagonal
+        if (finalSnappedAngle % 90 != 0) {
             float rad = MathUtils.degreesToRadians * 45;
             finalCollisionWidth = (scaledWidth * MathUtils.cos(rad) + scaledHeight * MathUtils.sin(rad));
             finalCollisionHeight = (scaledWidth * MathUtils.sin(rad) + scaledHeight * MathUtils.cos(rad));
@@ -214,42 +257,102 @@ public class Fish {
         bounds.set(newCenterX - finalCollisionWidth / 2, newCenterY - finalCollisionHeight / 2, finalCollisionWidth, finalCollisionHeight);
     }
 
-    private void handleTigerfishPatrol(float delta, float scaledWidth, float scaledHeight) {
+    private void handleTigerfishPatrol(float delta, float scaledWidth, float scaledHeight, float margin) {
         patrolTimer -= delta;
-        if (patrolTimer <= 0) {
-            patrolTimer = 60f; // 1 minute
-            patrolWall = MathUtils.random(0, 3);
-            if (patrolWall == 0) direction.set(0, 1); // Top
-            else if (patrolWall == 1) direction.set(0, -1); // Bottom
-            else if (patrolWall == 2) direction.set(-1, 0); // Left
-            else if (patrolWall == 3) direction.set(1, 0); // Right
+        if (patrolTimer <= 0 || patrolWall == -1) {
+            patrolTimer = 60f; // Paces for 60 seconds
+            patrolWall = MathUtils.random(0, 3); // 0: Top, 1: Bottom, 2: Left, 3: Right
+
+            // Set initial pacing direction
+            if (patrolWall == 0 || patrolWall == 1) {
+                direction.set(MathUtils.randomBoolean() ? 1 : -1, 0);
+            } else {
+                direction.set(0, MathUtils.randomBoolean() ? 1 : -1);
+            }
         }
 
-        float safeZone = 50f;
-        if (patrolWall == 0 && position.y > gameManager.getTankHeight() - scaledHeight - safeZone) { // Top
-            if (direction.y > 0) direction.set(MathUtils.randomBoolean() ? 1 : -1, 0);
-        } else if (patrolWall == 1 && position.y < safeZone) { // Bottom
-            if (direction.y < 0) direction.set(MathUtils.randomBoolean() ? 1 : -1, 0);
-        } else if (patrolWall == 2 && position.x < safeZone) { // Left
-            if (direction.x < 0) direction.set(0, MathUtils.randomBoolean() ? 1 : -1);
-        } else if (patrolWall == 3 && position.x > gameManager.getTankWidth() - scaledWidth - safeZone) { // Right
-            if (direction.x > 0) direction.set(0, MathUtils.randomBoolean() ? 1 : -1);
+        float wallOffset = margin + 5f;
+        if (patrolWall == 0) { // Top (Roof)
+            float targetY = gameManager.getTankHeight() - scaledHeight - wallOffset;
+            position.y += (targetY - position.y) * delta * 2;
+            direction.y = 0;
+            if (Math.abs(direction.x) < 0.1f) direction.x = 1;
+        } else if (patrolWall == 1) { // Bottom (Floor)
+            float targetY = wallOffset;
+            position.y += (targetY - position.y) * delta * 2;
+            direction.y = 0;
+            if (Math.abs(direction.x) < 0.1f) direction.x = 1;
+        } else if (patrolWall == 2) { // Left Wall
+            float targetX = wallOffset;
+            position.x += (targetX - position.x) * delta * 2;
+            direction.x = 0;
+            if (Math.abs(direction.y) < 0.1f) direction.y = 1;
+        } else if (patrolWall == 3) { // Right Wall
+            float targetX = gameManager.getTankWidth() - scaledWidth - wallOffset;
+            position.x += (targetX - position.x) * delta * 2;
+            direction.x = 0;
+            if (Math.abs(direction.y) < 0.1f) direction.y = 1;
+        }
+        direction.nor();
+    }
+
+    private void handleClownfishPatrol(float delta, float scaledWidth, float scaledHeight, float margin) {
+        wanderTimer -= delta;
+        if (wanderTimer <= 0) {
+            wanderTimer = MathUtils.random(3f, 7f);
+            direction.rotateDeg(MathUtils.random(-45f, 45f));
+            if (position.y > gameManager.getTankHeight() * 0.5f) {
+                direction.y -= 0.5f;
+            } else if (position.y < gameManager.getTankHeight() * 0.15f) {
+                direction.y += 0.5f;
+            }
+            direction.nor();
+
+            // Randomly decide to swim behind decor
+            isBehindDecor = MathUtils.randomBoolean();
+        }
+    }
+
+    private void handleAngelfishPatrol(float delta, float scaledWidth, float scaledHeight, float margin) {
+        wanderTimer -= delta;
+        if (wanderTimer <= 0) {
+            wanderTimer = MathUtils.random(4f, 9f);
+            direction.rotateDeg(MathUtils.random(-30f, 30f));
+            if (position.y < gameManager.getTankHeight() * 0.4f) {
+                direction.y += 0.4f;
+            }
+            direction.nor();
+        }
+    }
+
+    private void handleGoldfishPatrol(float delta, float scaledWidth, float scaledHeight, float margin) {
+        wanderTimer -= delta;
+        if (wanderTimer <= 0) {
+            wanderTimer = MathUtils.random(3f, 8f);
+            direction.rotateDeg(MathUtils.random(-60f, 60f));
+            if (position.y > gameManager.getTankHeight() * 0.6f) {
+                direction.y -= 0.4f;
+            } else if (position.y < gameManager.getTankHeight() * 0.2f) {
+                direction.y += 0.4f;
+            }
+            direction.nor();
         }
     }
 
     public void draw(SpriteBatch batch) {
-        float angle = direction.angleDeg();
-        float snappedAngle = Math.round(angle / 45) * 45;
+        if (Math.abs(direction.x) > 0.1f) {
+            lastFlipX = direction.x < 0;
+        }
 
-        boolean flipX = direction.x < 0;
-
-        if (flipX != textureRegion.isFlipX()) {
+        if (lastFlipX != textureRegion.isFlipX()) {
             textureRegion.flip(true, false);
         }
 
+        float angle = direction.angleDeg();
+        float snappedAngle = Math.round(angle / 45) * 45;
         float rotation = 0;
-        if (snappedAngle % 90 != 0) { // is diagonal
-            if (flipX) {
+        if (snappedAngle % 90 != 0) {
+            if (lastFlipX) {
                 rotation = snappedAngle - 180;
             } else {
                 rotation = snappedAngle;
@@ -267,6 +370,10 @@ public class Fish {
             if (fillValue >= maxFillValue) {
                 fillValue = maxFillValue;
                 isAdult = true;
+                clearTargetFood();
+                clearTargetFish();
+                clearTargetEgg();
+                schoolingLeader = null;
             }
             currentScale = minScale + (maxScale - minScale) * ((float) fillValue / maxFillValue);
         }
@@ -302,6 +409,7 @@ public class Fish {
         this.targetFood = null;
         this.isGuardingEgg = false;
         this.direction.set(MathUtils.random(-1f, 1f), MathUtils.random(-1f, 1f)).nor();
+        if (direction.len() == 0) direction.set(1, 0);
     }
 
     public void setTargetFish(Fish fish) {
@@ -316,6 +424,7 @@ public class Fish {
         this.targetFish = null;
         this.isGuardingEgg = false;
         this.direction.set(MathUtils.random(-1f, 1f), MathUtils.random(-1f, 1f)).nor();
+        if (direction.len() == 0) direction.set(1, 0);
     }
 
     public void setSchoolingLeader(Fish leader) {
@@ -338,6 +447,7 @@ public class Fish {
         this.targetEgg = null;
         this.isGuardingEgg = false;
         this.direction.set(MathUtils.random(-1f, 1f), MathUtils.random(-1f, 1f)).nor();
+        if (direction.len() == 0) direction.set(1, 0);
     }
 
     public void setAsLeader() {
@@ -370,5 +480,9 @@ public class Fish {
 
     public boolean isAdult() {
         return isAdult;
+    }
+
+    public boolean isBehindDecor() {
+        return isBehindDecor;
     }
 }

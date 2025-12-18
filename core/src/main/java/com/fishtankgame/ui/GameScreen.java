@@ -23,6 +23,7 @@ import com.fishtankgame.model.Fish;
 import com.fishtankgame.model.Food;
 import com.fishtankgame.model.FoodPellet;
 import com.fishtankgame.model.EggObject;
+import com.fishtankgame.model.Decor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +36,7 @@ public class GameScreen extends ScreenAdapter {
     private Shop shop;
 
     private Texture background;
-    private List<Bubble> bubbles;
+    private List<Bubble> backgroundBubbles;
 
     private Stage stage;
     private Viewport viewport;
@@ -43,46 +44,43 @@ public class GameScreen extends ScreenAdapter {
     private Label moneyLabel;
     private Label inventoryLabel;
 
-    private Table mainTable;
+    private Table uiRoot;
     private TextButton showUiButton;
 
-    public GameScreen(FishTankGame game, GameManager gameManager, Shop shop, SpriteBatch batch, List<Bubble> bubbles, Texture background) {
+    public GameScreen(FishTankGame game, GameManager gameManager, Shop shop, SpriteBatch batch, List<Bubble> backgroundBubbles, Texture background, Skin skin) {
         this.game = game;
         this.gameManager = gameManager;
         this.shop = shop;
         this.batch = batch;
-        this.bubbles = bubbles;
+        this.backgroundBubbles = backgroundBubbles;
         this.background = background;
+        this.skin = skin;
 
         viewport = new ExtendViewport(FishTankGame.VIRTUAL_WIDTH, FishTankGame.VIRTUAL_HEIGHT);
         stage = new Stage(viewport, batch);
-        skin = new Skin(Gdx.files.internal("uiskin.json"));
 
-        // Use a Table for layout
-        mainTable = new Table();
-        mainTable.setFillParent(true);
-        mainTable.top(); // Align table to the top of the screen
-        stage.addActor(mainTable);
+        // Common translucent background (slightly darker for better contrast)
+        com.badlogic.gdx.scenes.scene2d.utils.Drawable translucentBg = skin.newDrawable("white", new Color(0, 0, 0, 0.5f));
 
-        // --- Top Left Stats Panel ---
-        Table statsTable = new Table();
-        statsTable.pad(20);
+        // --- Main UI Root Table ---
+        uiRoot = new Table();
+        uiRoot.setFillParent(true);
+        uiRoot.pad(50);
+        stage.addActor(uiRoot);
 
-        moneyLabel = new Label("", skin);
-        moneyLabel.setFontScale(3.6f);
-        statsTable.add(moneyLabel).left().row();
-
+        // --- Inventory (Top Left) ---
         inventoryLabel = new Label("", skin);
         inventoryLabel.setFontScale(3.0f);
-        statsTable.add(inventoryLabel).left().padTop(10);
+        Table inventoryTable = new Table();
+        inventoryTable.setBackground(translucentBg);
+        inventoryTable.add(inventoryLabel).pad(20);
 
-        // --- Top Right Buttons Panel ---
+        // --- Buttons (Top Right) ---
         Table buttonTable = new Table();
+        buttonTable.setBackground(translucentBg);
         buttonTable.pad(20);
 
         float buttonScale = 3.75f;
-
-        // Create a style without background for the main screen buttons
         TextButton.TextButtonStyle noBgStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
         noBgStyle.up = null;
         noBgStyle.down = null;
@@ -124,38 +122,49 @@ public class GameScreen extends ScreenAdapter {
             }
         });
 
-        TextButton hideUiButton = new TextButton("Hide UI", noBgStyle);
+        float verticalSpace = 50f;
+        buttonTable.add(shopButton).fillX().uniformX().pad(10).padBottom(verticalSpace).row();
+        buttonTable.add(dropFoodButton).fillX().uniformX().pad(10).padBottom(verticalSpace).row();
+        buttonTable.add(sellButton).fillX().uniformX().pad(10);
+
+        // --- Money (Bottom Left) ---
+        moneyLabel = new Label("", skin);
+        moneyLabel.setFontScale(3.6f);
+        Table moneyTable = new Table();
+        moneyTable.setBackground(translucentBg);
+        moneyTable.add(moneyLabel).pad(20);
+
+        // --- Hide UI (Bottom Right) ---
+        TextButton hideUiButton = new TextButton("Hide Text", noBgStyle);
         hideUiButton.getLabel().setFontScale(buttonScale);
+        Table hideTable = new Table();
+        hideTable.setBackground(translucentBg);
+        hideTable.add(hideUiButton).pad(20);
+
         hideUiButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                mainTable.setVisible(false);
+                uiRoot.setVisible(false);
                 showUiButton.setVisible(true);
             }
         });
 
-        // Add buttons with padding between them
-        float verticalSpace = 50f;
-        buttonTable.add(shopButton).fillX().uniformX().padBottom(verticalSpace).row();
-        buttonTable.add(dropFoodButton).fillX().uniformX().padBottom(verticalSpace).row();
-        buttonTable.add(sellButton).fillX().uniformX().padBottom(verticalSpace).row();
-        buttonTable.add(hideUiButton).fillX().uniformX();
+        // --- Arrange in uiRoot ---
+        uiRoot.add(inventoryTable).top().left().expand();
+        uiRoot.add(buttonTable).top().right().expand();
+        uiRoot.row();
+        uiRoot.add(moneyTable).bottom().left().expand();
+        uiRoot.add(hideTable).bottom().right().expand();
 
-        // Add both panels to the main table
-        mainTable.add(statsTable).top().left().expandX().pad(20);
-        mainTable.add(buttonTable).top().right().pad(20);
-
-        // --- Hidden "Show UI" (X) Button ---
-        // We use the default style for this one so it has a visible box as requested
+        // --- Hidden "Show UI" (X) Button (Needs its own Table for background too) ---
         showUiButton = new TextButton("X", skin);
-        showUiButton.getLabel().setFontScale(2.5f);
-        showUiButton.setSize(80, 80);
-        showUiButton.setPosition(viewport.getWorldWidth() - 100, viewport.getWorldHeight() - 100);
+        showUiButton.getLabel().setFontScale(3.75f);
+        showUiButton.setSize(120, 120);
         showUiButton.setVisible(false);
         showUiButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                mainTable.setVisible(true);
+                uiRoot.setVisible(true);
                 showUiButton.setVisible(false);
             }
         });
@@ -167,6 +176,16 @@ public class GameScreen extends ScreenAdapter {
         updateMoneyLabel();
         updateInventoryDisplay();
         Gdx.input.setInputProcessor(stage);
+
+        if (gameManager.isBubblerActive()) {
+            game.startBubblerSound();
+        }
+    }
+
+    @Override
+    public void hide() {
+        Gdx.input.setInputProcessor(null);
+        game.stopBubblerSound();
     }
 
     private void updateMoneyLabel() {
@@ -193,12 +212,40 @@ public class GameScreen extends ScreenAdapter {
 
         batch.setProjectionMatrix(viewport.getCamera().combined);
         batch.begin();
-        // Background should cover the extended area
         batch.draw(background, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
 
-        for (Bubble bubble : bubbles) {
-            bubble.update();
+        for (Bubble bubble : backgroundBubbles) {
+            bubble.update(delta);
             bubble.draw(batch);
+        }
+
+        for (Fish fish : gameManager.getFishList()) {
+            if (fish.getBreed().equals("Clownfish") && fish.isBehindDecor()) {
+                fish.draw(batch);
+            }
+        }
+
+        for (Decor decor : gameManager.getDecorItems()) {
+            if (decor.getSlotIndex() != -1) {
+                decor.draw(batch);
+            }
+        }
+
+        for (Fish fish : gameManager.getFishList()) {
+            boolean isHidingClownfish = fish.getBreed().equals("Clownfish") && fish.isBehindDecor();
+            if (!isHidingClownfish) {
+                fish.draw(batch);
+            }
+        }
+
+        for (Decor decor : gameManager.getDecorItems()) {
+            if (decor.getSlotIndex() == -1) {
+                decor.draw(batch);
+            }
+        }
+
+        for (Bubble b : gameManager.getDecorBubbles()) {
+            b.draw(batch);
         }
 
         for (FoodPellet pellet : gameManager.getFoodPellets()) {
@@ -211,9 +258,6 @@ public class GameScreen extends ScreenAdapter {
             egg.draw(batch);
         }
 
-        for (Fish fish : gameManager.getFishList()) {
-            fish.draw(batch);
-        }
         batch.end();
 
         stage.act(delta);
@@ -224,18 +268,11 @@ public class GameScreen extends ScreenAdapter {
     public void resize(int width, int height) {
         viewport.update(width, height, true);
         gameManager.updateTankSize(viewport.getWorldWidth(), viewport.getWorldHeight());
-        // Reposition the X button on resize
-        showUiButton.setPosition(viewport.getWorldWidth() - 100, viewport.getWorldHeight() - 100);
-    }
-
-    @Override
-    public void hide() {
-        Gdx.input.setInputProcessor(null);
+        showUiButton.setPosition(viewport.getWorldWidth() - 200, 50);
     }
 
     @Override
     public void dispose() {
         stage.dispose();
-        skin.dispose();
     }
 }

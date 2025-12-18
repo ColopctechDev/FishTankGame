@@ -10,26 +10,29 @@ public class Bubble {
     private Vector2 position;
     private float speed;
     private Texture texture;
-    private float scale = MathUtils.random(0.0125f, 0.0375f); // Adjusted scale
+    private float scale;
+    private float tankHeight;
 
-    public Bubble(Texture texture) {
+    public Bubble(Texture texture, float x, float y, float tankHeight) {
         this.texture = texture;
-        this.position = new Vector2(MathUtils.random(0, 1280), MathUtils.random(-100, -10));
-        this.speed = MathUtils.random(1, 3);
+        this.position = new Vector2(x, y);
+        this.tankHeight = tankHeight;
+        this.speed = MathUtils.random(1.5f, 3.5f);
+        this.scale = MathUtils.random(0.015f, 0.035f);
     }
 
-    public void update() {
-        position.y += speed;
-        if (position.y > 720) {
-            position.x = MathUtils.random(0, 1280);
-            position.y = MathUtils.random(-100, -10);
-        }
+    public void update(float delta) {
+        position.y += speed * 60 * delta;
     }
 
     public void draw(SpriteBatch batch) {
         Color color = batch.getColor();
-        batch.setColor(color.r, color.g, color.b, 0.5f); // 50% transparent
+        batch.setColor(color.r, color.g, color.b, 0.4f);
         batch.draw(texture, position.x, position.y, texture.getWidth() * scale, texture.getHeight() * scale);
-        batch.setColor(color.r, color.g, color.b, 1f); // Reset to opaque
+        batch.setColor(color.r, color.g, color.b, 1f);
+    }
+
+    public boolean isOffScreen() {
+        return position.y > tankHeight;
     }
 }

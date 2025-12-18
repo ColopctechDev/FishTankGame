@@ -20,17 +20,15 @@ public class EggObject {
         this.texture = texture;
         this.position = new Vector2(x, y);
         this.velocity = new Vector2(0, -MathUtils.random(12.5f, 25f)); // Sinking speed
-        this.bounds = new Rectangle(x, y, 16, 16); // Egg size
+
+        // Egg size increased (4x the original 16 to be 300% bigger)
+        float size = 64;
+        this.bounds = new Rectangle(x, y, size, size);
         this.floorY = MathUtils.random(30f, 50f); // Random floor position
 
-        // Set hatch timer based on breed
-        if ("Goldfish".equals(eggData.getBreed())) {
-            this.hatchTimer = 30f; // 30 seconds
-        } else if ("Blue Tang".equals(eggData.getBreed())) {
-            this.hatchTimer = 45f; // 45 seconds
-        } else {
-            this.hatchTimer = 60f; // Default for any future breeds
-        }
+        // Set hatch timer based on breed info
+        FishBreed breedInfo = FishBreed.fromName(eggData.getBreed());
+        this.hatchTimer = breedInfo.getHatchTime();
     }
 
     public void update(float delta) {
