@@ -14,7 +14,7 @@ public class Shop {
     public void buyEgg(Egg egg) {
         if (gameManager.getMoney() >= egg.getPrice()) {
             gameManager.setMoney(gameManager.getMoney() - egg.getPrice());
-            gameManager.getEggList().add(egg);
+            gameManager.dropEgg(egg);
         }
     }
 
