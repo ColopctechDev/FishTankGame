@@ -27,9 +27,11 @@ public class GameManager {
     private final List<Decor> decorItems;
     private final List<Bubble> decorBubbles;
     private double money;
+    private int pearls;
     private final Map<String, Texture> fishTextures;
     private final Map<String, Texture> decorTextures;
     private final Texture bubbleTexture;
+    private PurchaseHandler purchaseHandler;
 
     private float bubbleSpawnTimer = 0;
 
@@ -45,11 +47,34 @@ public class GameManager {
         decorItems = new ArrayList<>();
         decorBubbles = new ArrayList<>();
         money = 50.0;
+        pearls = 1000; // Testing pearls
         fishTextures = new HashMap<>();
         decorTextures = new HashMap<>();
         this.bubbleTexture = bubbleTexture;
 
-        foodInventory.put(new Food("Flax", 30, 5.0), 50);
+        // Default inventory
+        foodInventory.put(new Food("Sunflower", 1, 10.0), 30);
+        foodInventory.put(new Food("Chia", 10, 50.0), 5); // Add 5 Chia seeds
+    }
+
+    public void setPurchaseHandler(PurchaseHandler purchaseHandler) {
+        this.purchaseHandler = purchaseHandler;
+    }
+
+    public void purchasePearls(final int amount) {
+        if (purchaseHandler != null) {
+            purchaseHandler.purchasePremiumCurrency(amount, new PurchaseHandler.PurchaseCallback() {
+                @Override
+                public void onSuccess() {
+                    pearls += amount;
+                }
+
+                @Override
+                public void onFailure(String message) {
+                    // Handle failure (maybe log or show a message)
+                }
+            });
+        }
     }
 
     public void initDecor(Texture chest, Texture bubbler, Texture plant1, Texture plant2, Texture plant3, Texture plant4) {
@@ -162,6 +187,10 @@ public class GameManager {
         fishTextures.put(breed, texture);
     }
 
+    public Texture getFishTexture(String breed) {
+        return fishTextures.get(breed);
+    }
+
     public void update(float delta) {
         updateDecorBubbles(delta);
         List<EggObject> hatchedEggs = new ArrayList<>();
@@ -182,7 +211,7 @@ public class GameManager {
             if (fishTextures.containsKey(eggData.getBreed())) {
                 Texture fishTexture = fishTextures.get(eggData.getBreed());
                 FishBreed breedInfo = FishBreed.fromName(eggData.getBreed());
-                fishList.add(new Fish("New Fish", breedInfo.getName(), eggData.getPrice() * 2, breedInfo.getSpeed(), fishTexture, breedInfo.getMaxFillValue(), this, eggObject.getPosition()));
+                fishList.add(new Fish("New Fish", breedInfo.getName(), eggData.getPrice() * 3, breedInfo.getSpeed(), fishTexture, breedInfo.getMaxFillValue(), this, eggObject.getPosition()));
             }
         }
         for (Fish fish : fishList) {
@@ -422,16 +451,30 @@ public class GameManager {
     }
 
     public void dropFood() {
-        if (!foodInventory.isEmpty()) {
-            Food foodToDrop = foodInventory.keySet().iterator().next();
-            Integer quantity = foodInventory.get(foodToDrop);
-            if (quantity == null) quantity = 0;
+        dropFood(false);
+    }
 
+    public void dropFood(boolean premiumOnly) {
+        Food bestFood = null;
+        int highestGrowth = -1;
+
+        for (Map.Entry<Food, Integer> entry : foodInventory.entrySet()) {
+            Food food = entry.getKey();
+            if (food.isPremium() == premiumOnly) {
+                if (food.getGrowthBoost() > highestGrowth) {
+                    highestGrowth = food.getGrowthBoost();
+                    bestFood = food;
+                }
+            }
+        }
+
+        if (bestFood != null) {
+            Integer quantity = foodInventory.get(bestFood);
             float x = MathUtils.random(tankWidth * 0.2f, tankWidth * 0.8f);
             float y = MathUtils.random(480, tankHeight - 16);
-            foodPellets.add(new FoodPellet(foodToDrop, bubbleTexture, x, y));
-            if (quantity > 1) foodInventory.put(foodToDrop, quantity - 1);
-            else foodInventory.remove(foodToDrop);
+            foodPellets.add(new FoodPellet(bestFood, bubbleTexture, x, y));
+            if (quantity > 1) foodInventory.put(bestFood, quantity - 1);
+            else foodInventory.remove(bestFood);
         }
     }
 
@@ -447,4 +490,6 @@ public class GameManager {
     public Map<Food, Integer> getFoodInventory() { return foodInventory; }
     public double getMoney() { return money; }
     public void setMoney(double money) { this.money = money; }
+    public int getPearls() { return pearls; }
+    public void setPearls(int pearls) { this.pearls = pearls; }
 }

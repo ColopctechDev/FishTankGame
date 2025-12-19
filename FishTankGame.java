@@ -10,8 +10,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.fishtankgame.effects.Bubble;
 import com.fishtankgame.game.GameManager;
 import com.fishtankgame.game.Shop;
-import com.fishtankgame.model.Fish;
-import com.fishtankgame.model.FishBreed;
 import com.fishtankgame.ui.GameScreen;
 import com.fishtankgame.ui.ShopScreen;
 
@@ -66,27 +64,14 @@ public class FishTankGame extends Game {
         gameManager.addFishTexture("Rainbowfish", loadTexture("fish/rainbowfish.png"));
 
         // Load Decor Textures
-        Texture fernTex = loadTexture("decor/plant1.png");
         gameManager.initDecor(
                 loadTexture("decor/chest.png"),
                 loadTexture("decor/bubbler.png"),
-                fernTex,
+                loadTexture("decor/plant1.png"),
                 loadTexture("decor/plant2.png"),
                 loadTexture("decor/plant3.png"),
                 loadTexture("decor/plant4.png")
         );
-
-        // --- Starting Game Status ---
-        // 1. Initial Fern in position 8
-        gameManager.addPlantToSlot("Green Fern", fernTex, 8, 1.2f, 10.0);
-
-        // 2. Initial Baby Goldfish
-        FishBreed goldfish = FishBreed.GOLDFISH;
-        gameManager.getFishList().add(new Fish("Starter Goldy", goldfish.getName(), 15.0, goldfish.getSpeed(), gameManager.getFishTexture(goldfish.getName()), goldfish.getMaxFillValue(), gameManager));
-
-        // 3. Initial Baby Angelfish
-        FishBreed angelfish = FishBreed.ANGELFISH;
-        gameManager.getFishList().add(new Fish("Starter Angel", angelfish.getName(), 60.0, angelfish.getSpeed(), gameManager.getFishTexture(angelfish.getName()), angelfish.getMaxFillValue(), gameManager));
 
         bubbles = new ArrayList<>();
         for (int i = 0; i < 20; i++) {

@@ -13,20 +13,48 @@ public class Shop {
     }
 
     public void buyEgg(Egg egg) {
-        if (gameManager.getMoney() >= egg.getPrice()) {
-            gameManager.setMoney(gameManager.getMoney() - egg.getPrice());
-            gameManager.dropEgg(egg);
+        if (egg.isPremium()) {
+            if (gameManager.getPearls() >= egg.getPrice()) {
+                gameManager.setPearls(gameManager.getPearls() - (int) egg.getPrice());
+                gameManager.dropEgg(egg);
+            }
+        } else {
+            if (gameManager.getMoney() >= egg.getPrice()) {
+                gameManager.setMoney(gameManager.getMoney() - egg.getPrice());
+                gameManager.dropEgg(egg);
+            }
         }
     }
 
     public void buyFood(Food food) {
-        if (gameManager.getMoney() >= food.getPrice()) {
-            gameManager.setMoney(gameManager.getMoney() - food.getPrice());
-            gameManager.addFood(food, 5);
+        int quantity = 10; // Default
+        if (food.getType().equals("Sunflower")) quantity = 30;
+        else if (food.getType().equals("Poppy")) quantity = 20;
+        else if (food.getType().equals("Flax")) quantity = 15;
+        else if (food.getType().equals("Hemp") || food.getType().equals("Chia") || food.getType().equals("Sesame")) quantity = 15;
+        else if (food.getType().equals("Pumpkin") || food.getType().equals("Quinoa")) quantity = 10;
+
+        if (food.isPremium()) {
+            if (gameManager.getPearls() >= food.getPrice()) {
+                gameManager.setPearls(gameManager.getPearls() - (int) food.getPrice());
+                gameManager.addFood(food, quantity);
+            }
+        } else {
+            if (gameManager.getMoney() >= food.getPrice()) {
+                gameManager.setMoney(gameManager.getMoney() - food.getPrice());
+                gameManager.addFood(food, quantity);
+            }
         }
     }
 
     public void buyDecor(String name, double price, int slotIndex) {
+        // Prevent buying multiple Bubblers or Chests
+        if (slotIndex == -1) {
+            for (Decor d : gameManager.getDecorItems()) {
+                if (d.getType().equals(name)) return;
+            }
+        }
+
         if (gameManager.getMoney() >= price) {
             gameManager.setMoney(gameManager.getMoney() - price);
             gameManager.addDecor(name, price, slotIndex);

@@ -31,22 +31,26 @@ public class ShopScreen extends ScreenAdapter {
     private Shop shop;
     private GameManager gameManager;
     private Label moneyLabel;
+    private Label pearlLabel;
     private Label activeTabLabel;
 
     private Table eggContent;
     private Table foodContent;
     private Table decorContent;
+    private Table pearlContent;
 
     private TextButton eggTabButton;
     private TextButton foodTabButton;
     private TextButton decorTabButton;
+    private TextButton pearlTabButton;
 
     private boolean isDecorBuyMode = true;
 
-    private void updateMoneyLabel() {
+    private void updateCurrencyLabels() {
         double money = gameManager.getMoney();
         String moneyText = (money == (long) money) ? String.format("%d", (long) money) : String.format("%.2f", money);
         moneyLabel.setText("Funds: $" + moneyText);
+        pearlLabel.setText("Pearls: " + gameManager.getPearls());
     }
 
     private void refreshDecorTab() {
@@ -86,7 +90,8 @@ public class ShopScreen extends ScreenAdapter {
 
         subTabs.add(buyModeBtn).width(300).height(80).pad(10);
         subTabs.add(sellModeBtn).width(300).height(80).pad(10);
-        mainDecorTable.add(subTabs).pad(20).row();
+        mainDecorTable.add(subTabs).pad(20);
+        mainDecorTable.row();
 
         if (isDecorBuyMode) {
             // Buy Section
@@ -130,7 +135,7 @@ public class ShopScreen extends ScreenAdapter {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
                             shop.sellDecor(decorToSell);
-                            updateMoneyLabel();
+                            updateCurrencyLabels();
                             refreshDecorTab();
                         }
                     });
@@ -162,7 +167,7 @@ public class ShopScreen extends ScreenAdapter {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
                             shop.sellDecor(decor);
-                            updateMoneyLabel();
+                            updateCurrencyLabels();
                             refreshDecorTab();
                         }
                     });
@@ -198,14 +203,22 @@ public class ShopScreen extends ScreenAdapter {
         title.setFontScale(3.5f);
         moneyLabel = new Label("", skin);
         moneyLabel.setFontScale(3.0f);
+        pearlLabel = new Label("", skin);
+        pearlLabel.setFontScale(3.0f);
+        pearlLabel.setColor(new Color(0.7f, 0.9f, 1f, 1f));
+
+        Table infoTable = new Table();
+        infoTable.add(moneyLabel).right().row();
+        infoTable.add(pearlLabel).right();
+
         header.add(title).expandX().left();
-        header.add(moneyLabel).right();
+        header.add(infoTable).right();
         root.add(header).fillX().row();
 
-        // Active Tab Display - Gold Color - Made bigger
+        // Active Tab Display
         activeTabLabel = new Label("EGGS", skin);
         activeTabLabel.setFontScale(3.2f);
-        activeTabLabel.setColor(new Color(1f, 0.843f, 0f, 1f)); // Gold
+        activeTabLabel.setColor(new Color(1f, 0.843f, 0f, 1f));
         root.add(activeTabLabel).pad(10).row();
 
         // Tabs
@@ -213,11 +226,13 @@ public class ShopScreen extends ScreenAdapter {
         eggTabButton = new TextButton("EGGS", skin);
         foodTabButton = new TextButton("FOOD", skin);
         decorTabButton = new TextButton("DECOR", skin);
+        pearlTabButton = new TextButton("PEARLS", skin);
 
         float tabFontScale = 2.2f;
         eggTabButton.getLabel().setFontScale(tabFontScale);
         foodTabButton.getLabel().setFontScale(tabFontScale);
         decorTabButton.getLabel().setFontScale(tabFontScale);
+        pearlTabButton.getLabel().setFontScale(tabFontScale);
 
         eggTabButton.addListener(new ClickListener() {
             @Override
@@ -238,10 +253,17 @@ public class ShopScreen extends ScreenAdapter {
                 refreshDecorTab();
             }
         });
+        pearlTabButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                showTab(pearlContent, "PEARLS");
+            }
+        });
 
         tabs.add(eggTabButton).expandX().fillX().height(80);
         tabs.add(foodTabButton).expandX().fillX().height(80);
         tabs.add(decorTabButton).expandX().fillX().height(80);
+        tabs.add(pearlTabButton).expandX().fillX().height(80);
         root.add(tabs).fillX().row();
 
         // Main content area
@@ -259,6 +281,8 @@ public class ShopScreen extends ScreenAdapter {
         eggGrid.row();
         addEggButton(eggGrid, "Clownfish", 30);
         addEggButton(eggGrid, "Tigerfish", 50);
+        addEggButton(eggGrid, "Koi", 100, true);
+        addEggButton(eggGrid, "Rainbowfish", 250, true);
         eggContent.add(eggGrid).expand().fill();
 
         // --- Food Content ---
@@ -272,6 +296,9 @@ public class ShopScreen extends ScreenAdapter {
         addFoodButton(foodGrid, "Sesame", 40, 7.0);
         foodGrid.row();
         addFoodButton(foodGrid, "Chia", 50, 10.0);
+        addFoodButton(foodGrid, "Hemp", 75, 15.0);
+        addFoodButton(foodGrid, "Pumpkin", 10, 50.0, true);
+        addFoodButton(foodGrid, "Quinoa", 25, 100.0, true);
         foodContent.add(foodGrid).expand().fill();
 
         // --- Decor Content ---
@@ -279,12 +306,25 @@ public class ShopScreen extends ScreenAdapter {
         decorContent.top();
         refreshDecorTab();
 
+        // --- Pearl Content ---
+        pearlContent = new Table();
+        pearlContent.top();
+        Table pearlGrid = new Table();
+        pearlGrid.pad(10);
+        addPearlPurchaseButton(pearlGrid, 100, "$0.99");
+        addPearlPurchaseButton(pearlGrid, 550, "$4.99");
+        addPearlPurchaseButton(pearlGrid, 1200, "$9.99");
+        addPearlPurchaseButton(pearlGrid, 2500, "$19.99");
+        pearlContent.add(pearlGrid).expand().fill();
+
         contentStack.add(eggContent);
         contentStack.add(foodContent);
         contentStack.add(decorContent);
+        contentStack.add(pearlContent);
 
         foodContent.setVisible(false);
         decorContent.setVisible(false);
+        pearlContent.setVisible(false);
 
         root.add(contentStack).expand().fill().row();
 
@@ -300,11 +340,25 @@ public class ShopScreen extends ScreenAdapter {
         root.add(backButton).pad(20, 20, 100, 20).width(500).height(100);
     }
 
-    private void showInsufficientFundsDialog() {
+    private void addPearlPurchaseButton(Table table, final int amount, String priceLabel) {
+        TextButton button = new TextButton(amount + " Pearls\n" + priceLabel, skin);
+        button.getLabel().setFontScale(2.5f);
+        button.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                gameManager.purchasePearls(amount);
+            }
+        });
+        table.add(button).width(340).height(160).pad(10);
+    }
+
+    private void showInsufficientFundsDialog(boolean isPremium) {
         final Dialog dialog = new Dialog("Transaction Denied", skin);
         dialog.getTitleLabel().setFontScale(2.5f);
 
-        Label message = new Label("You don't have enough money for this item.\nSell adult fish to make more money.", skin);
+        String currencyName = isPremium ? "pearls" : "money";
+        String advice = isPremium ? "Visit the PEARLS tab to get more." : "Sell adult fish to make more money.";
+        Label message = new Label("You don't have enough " + currencyName + " for this item.\n" + advice, skin);
         message.setFontScale(2.0f);
         message.setAlignment(com.badlogic.gdx.utils.Align.center);
 
@@ -328,21 +382,40 @@ public class ShopScreen extends ScreenAdapter {
 
         TextButton button = new TextButton(label, skin);
         button.getLabel().setFontScale(2.2f);
+
+        // Check if the item is already owned (for Bubbler and Chest)
+        boolean isOwned = false;
+        if (type.equals("Bubbler") || type.equals("Treasure Chest")) {
+            for (Decor d : gameManager.getDecorItems()) {
+                if (d.getType().equals(type)) {
+                    isOwned = true;
+                    break;
+                }
+            }
+        }
+
+        if (isOwned) {
+            button.setDisabled(true);
+            button.getLabel().setColor(Color.GRAY);
+            button.setText(type + "\n[OWNED]");
+        }
+
         button.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                if (button.isDisabled()) return;
+
                 if (gameManager.getMoney() < price) {
-                    showInsufficientFundsDialog();
+                    showInsufficientFundsDialog(false);
                     return;
                 }
 
-                // Updated to check for the new names
                 if (type.equals("Green Fern") || type.equals("Red Kelp") ||
                     type.equals("Purple Coral") || type.equals("Amazon Sword")) {
                     showSlotPicker(type, price);
                 } else {
                     shop.buyDecor(type, price, -1);
-                    updateMoneyLabel();
+                    updateCurrencyLabels();
                     refreshDecorTab();
                 }
             }
@@ -375,15 +448,14 @@ public class ShopScreen extends ScreenAdapter {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
                     if (!slotBtn.isDisabled()) {
-                        // Check again in case money changed while dialog was open
                         if (gameManager.getMoney() >= price) {
                             shop.buyDecor(plantType, price, slot);
-                            updateMoneyLabel();
+                            updateCurrencyLabels();
                             dialog.hide();
                             refreshDecorTab();
                         } else {
                             dialog.hide();
-                            showInsufficientFundsDialog();
+                            showInsufficientFundsDialog(false);
                         }
                     }
                 }
@@ -408,6 +480,7 @@ public class ShopScreen extends ScreenAdapter {
         eggContent.setVisible(visibleTab == eggContent);
         foodContent.setVisible(visibleTab == foodContent);
         decorContent.setVisible(visibleTab == decorContent);
+        pearlContent.setVisible(visibleTab == pearlContent);
         activeTabLabel.setText(name);
     }
 
@@ -420,34 +493,66 @@ public class ShopScreen extends ScreenAdapter {
     }
 
     private void addEggButton(Table table, final String breed, final double price) {
-        TextButton button = new TextButton(breed + "\n$" + formatPrice(price), skin);
+        addEggButton(table, breed, price, false);
+    }
+
+    private void addEggButton(Table table, final String breed, final double price, final boolean isPremium) {
+        String label = breed + "\n" + formatPrice(price) + (isPremium ? " Pearls" : "");
+        if (!isPremium) label = breed + "\n$" + formatPrice(price);
+
+        TextButton button = new TextButton(label, skin);
         button.getLabel().setFontScale(2.5f);
+        if (isPremium) button.getLabel().setColor(new Color(0.7f, 0.9f, 1f, 1f));
+
         button.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                if (gameManager.getMoney() < price) {
-                    showInsufficientFundsDialog();
-                    return;
+                if (isPremium) {
+                    if (gameManager.getPearls() < price) {
+                        showInsufficientFundsDialog(true);
+                        return;
+                    }
+                } else {
+                    if (gameManager.getMoney() < price) {
+                        showInsufficientFundsDialog(false);
+                        return;
+                    }
                 }
-                shop.buyEgg(new Egg(breed, 5, price));
-                updateMoneyLabel();
+                shop.buyEgg(new Egg(breed, 5, price, isPremium));
+                updateCurrencyLabels();
             }
         });
         table.add(button).width(340).height(160).pad(10);
     }
 
-    private void addFoodButton(Table table, final String type, final int growth, final double price) {
-        TextButton button = new TextButton(type + "\n$" + formatPrice(price), skin);
+    private void addFoodButton(Table table, final String type, final double price, final double growth) {
+        addFoodButton(table, type, price, growth, false);
+    }
+
+    private void addFoodButton(Table table, final String type, final double price, final double growth, final boolean isPremium) {
+        String label = type + "\n" + formatPrice(price) + (isPremium ? " Pearls" : "");
+        if (!isPremium) label = type + "\n$" + formatPrice(price);
+
+        TextButton button = new TextButton(label, skin);
         button.getLabel().setFontScale(2.5f);
+        if (isPremium) button.getLabel().setColor(new Color(0.7f, 0.9f, 1f, 1f));
+
         button.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                if (gameManager.getMoney() < price) {
-                    showInsufficientFundsDialog();
-                    return;
+                if (isPremium) {
+                    if (gameManager.getPearls() < price) {
+                        showInsufficientFundsDialog(true);
+                        return;
+                    }
+                } else {
+                    if (gameManager.getMoney() < price) {
+                        showInsufficientFundsDialog(false);
+                        return;
+                    }
                 }
-                shop.buyFood(new Food(type, growth, price));
-                updateMoneyLabel();
+                shop.buyFood(new Food(type, (int) growth, price, isPremium));
+                updateCurrencyLabels();
             }
         });
         table.add(button).width(340).height(160).pad(10);
@@ -455,12 +560,13 @@ public class ShopScreen extends ScreenAdapter {
 
     @Override
     public void show() {
-        updateMoneyLabel();
+        updateCurrencyLabels();
         Gdx.input.setInputProcessor(stage);
     }
 
     @Override
     public void render(float delta) {
+        updateCurrencyLabels(); // Refresh pearls if purchase completed
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         stage.act(delta);

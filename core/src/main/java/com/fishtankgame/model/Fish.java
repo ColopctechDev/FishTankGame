@@ -34,6 +34,7 @@ public class Fish {
     private boolean isGuardingEgg = false;
     private float wanderTimer = MathUtils.random(2f, 5f);
     private GameManager gameManager;
+    private boolean isPremium;
 
     private float minScale = 0.04f;
     private float maxScale = 0.1f;
@@ -55,8 +56,18 @@ public class Fish {
         this.textureRegion = new TextureRegion(texture);
         this.maxFillValue = maxFillValue;
         this.isAdult = false;
-        this.currentScale = minScale;
         this.gameManager = gameManager;
+
+        FishBreed breedInfo = FishBreed.fromName(breed);
+        this.isPremium = breedInfo.isPremium();
+
+        // Premium fish are twice as big as standard fish
+        if (this.isPremium) {
+            this.minScale = 0.08f;
+            this.maxScale = 0.2f;
+        }
+
+        this.currentScale = minScale;
 
         float scaledWidth = texture.getWidth() * currentScale;
         float scaledHeight = texture.getHeight() * currentScale;
@@ -288,7 +299,7 @@ public class Fish {
             direction.x = 0;
             if (Math.abs(direction.y) < 0.1f) direction.y = 1;
         } else if (patrolWall == 3) { // Right Wall
-            float targetX = gameManager.getTankWidth() - scaledWidth - wallOffset;
+            float targetX = wallOffset;
             position.x += (targetX - position.x) * delta * 2;
             direction.x = 0;
             if (Math.abs(direction.y) < 0.1f) direction.y = 1;
@@ -484,5 +495,9 @@ public class Fish {
 
     public boolean isBehindDecor() {
         return isBehindDecor;
+    }
+
+    public boolean isPremium() {
+        return isPremium;
     }
 }

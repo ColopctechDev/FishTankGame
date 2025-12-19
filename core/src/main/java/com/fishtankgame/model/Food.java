@@ -6,11 +6,17 @@ public class Food {
     private String type;
     private int growthBoost;
     private double price;
+    private boolean isPremium;
 
     public Food(String type, int growthBoost, double price) {
+        this(type, growthBoost, price, false);
+    }
+
+    public Food(String type, int growthBoost, double price, boolean isPremium) {
         this.type = type;
         this.growthBoost = growthBoost;
         this.price = price;
+        this.isPremium = isPremium;
     }
 
     public String getType() {
@@ -23,6 +29,10 @@ public class Food {
 
     public double getPrice() {
         return price;
+    }
+
+    public boolean isPremium() {
+        return isPremium;
     }
 
     @Override

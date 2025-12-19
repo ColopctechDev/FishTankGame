@@ -42,10 +42,14 @@ public class GameScreen extends ScreenAdapter {
     private Viewport viewport;
     private Skin skin;
     private Label moneyLabel;
+    private Label pearlLabel;
     private Label inventoryLabel;
 
     private Table uiRoot;
     private TextButton showUiButton;
+    private TextButton sellButton;
+    private TextButton sellPearlButton;
+    private float checkAdultsTimer = 0;
 
     public GameScreen(FishTankGame game, GameManager gameManager, Shop shop, SpriteBatch batch, List<Bubble> backgroundBubbles, Texture background, Skin skin) {
         this.game = game;
@@ -101,17 +105,44 @@ public class GameScreen extends ScreenAdapter {
         dropFoodButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                gameManager.dropFood();
+                gameManager.dropFood(false);
             }
         });
 
-        TextButton sellButton = new TextButton("Sell Adult Fish", noBgStyle);
+        TextButton dropPearlFoodButton = new TextButton("Drop Pearl Food", noBgStyle);
+        dropPearlFoodButton.getLabel().setFontScale(buttonScale);
+        dropPearlFoodButton.getLabel().setColor(new Color(0.7f, 0.9f, 1f, 1f));
+        dropPearlFoodButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                gameManager.dropFood(true);
+            }
+        });
+
+        sellButton = new TextButton("Sell Adult Fish", noBgStyle);
         sellButton.getLabel().setFontScale(buttonScale);
         sellButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 for (Fish fish : new ArrayList<>(gameManager.getFishList())) {
-                    if (fish.isAdult()) {
+                    if (fish.isAdult() && !fish.isPremium()) {
+                        Fish soldFish = shop.sellFish(fish);
+                        if (soldFish != null) {
+                            gameManager.handleSoldFish(soldFish);
+                        }
+                        break;
+                    }
+                }
+            }
+        });
+
+        sellPearlButton = new TextButton("Sell Adult Pearl", noBgStyle);
+        sellPearlButton.getLabel().setFontScale(buttonScale);
+        sellPearlButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                for (Fish fish : new ArrayList<>(gameManager.getFishList())) {
+                    if (fish.isAdult() && fish.isPremium()) {
                         Fish soldFish = shop.sellFish(fish);
                         if (soldFish != null) {
                             gameManager.handleSoldFish(soldFish);
@@ -125,14 +156,21 @@ public class GameScreen extends ScreenAdapter {
         float verticalSpace = 50f;
         buttonTable.add(shopButton).fillX().uniformX().pad(10).padBottom(verticalSpace).row();
         buttonTable.add(dropFoodButton).fillX().uniformX().pad(10).padBottom(verticalSpace).row();
-        buttonTable.add(sellButton).fillX().uniformX().pad(10);
+        buttonTable.add(dropPearlFoodButton).fillX().uniformX().pad(10).padBottom(verticalSpace).row();
+        buttonTable.add(sellButton).fillX().uniformX().pad(10).padBottom(verticalSpace).row();
+        buttonTable.add(sellPearlButton).fillX().uniformX().pad(10);
 
-        // --- Money (Bottom Left) ---
+        // --- Money & Pearls (Bottom Left) ---
         moneyLabel = new Label("", skin);
         moneyLabel.setFontScale(3.6f);
-        Table moneyTable = new Table();
-        moneyTable.setBackground(translucentBg);
-        moneyTable.add(moneyLabel).pad(20);
+        pearlLabel = new Label("", skin);
+        pearlLabel.setFontScale(3.6f);
+        pearlLabel.setColor(new Color(0.7f, 0.9f, 1f, 1f)); // Light blue for pearls
+
+        Table currencyTable = new Table();
+        currencyTable.setBackground(translucentBg);
+        currencyTable.add(moneyLabel).pad(10).left().row();
+        currencyTable.add(pearlLabel).pad(10).left();
 
         // --- Hide UI (Bottom Right) ---
         TextButton hideUiButton = new TextButton("Hide Text", noBgStyle);
@@ -153,7 +191,7 @@ public class GameScreen extends ScreenAdapter {
         uiRoot.add(inventoryTable).top().left().expand();
         uiRoot.add(buttonTable).top().right().expand();
         uiRoot.row();
-        uiRoot.add(moneyTable).bottom().left().expand();
+        uiRoot.add(currencyTable).bottom().left().expand();
         uiRoot.add(hideTable).bottom().right().expand();
 
         // --- Hidden "Show UI" (X) Button (Needs its own Table for background too) ---
@@ -173,7 +211,7 @@ public class GameScreen extends ScreenAdapter {
 
     @Override
     public void show() {
-        updateMoneyLabel();
+        updateCurrencyLabels();
         updateInventoryDisplay();
         Gdx.input.setInputProcessor(stage);
 
@@ -188,9 +226,10 @@ public class GameScreen extends ScreenAdapter {
         game.stopBubblerSound();
     }
 
-    private void updateMoneyLabel() {
+    private void updateCurrencyLabels() {
         moneyLabel.setText("Balance: $" + String.format("%.2f", gameManager.getMoney()));
         moneyLabel.setColor(gameManager.getMoney() > 10 ? Color.WHITE : Color.RED);
+        pearlLabel.setText("Pearls: " + gameManager.getPearls());
     }
 
     private void updateInventoryDisplay() {
@@ -201,10 +240,30 @@ public class GameScreen extends ScreenAdapter {
         inventoryLabel.setText(inventoryText.toString());
     }
 
+    private void checkAdultFish() {
+        boolean hasNormalAdult = false;
+        boolean hasPearlAdult = false;
+        for (Fish fish : gameManager.getFishList()) {
+            if (fish.isAdult()) {
+                if (fish.isPremium()) hasPearlAdult = true;
+                else hasNormalAdult = true;
+            }
+        }
+        sellButton.getLabel().setColor(hasNormalAdult ? Color.GREEN : Color.RED);
+        sellPearlButton.getLabel().setColor(hasPearlAdult ? Color.GREEN : Color.RED);
+    }
+
     @Override
     public void render(float delta) {
-        updateMoneyLabel();
+        updateCurrencyLabels();
         updateInventoryDisplay();
+
+        checkAdultsTimer += delta;
+        if (checkAdultsTimer >= 1.0f) {
+            checkAdultsTimer = 0;
+            checkAdultFish();
+        }
+
         Gdx.gl.glClearColor(0, 0, 1, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
