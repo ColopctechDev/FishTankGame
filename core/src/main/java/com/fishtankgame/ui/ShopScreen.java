@@ -101,8 +101,10 @@ public class ShopScreen extends ScreenAdapter {
             addDecorButton(buyGrid, "Purple Coral", 30);
             addDecorButton(buyGrid, "Amazon Sword", 40);
             buyGrid.row();
+            addDecorButton(buyGrid, "YardRock", 10);
             addDecorButton(buyGrid, "Treasure Chest", 100);
-            addDecorButton(buyGrid, "Bubbler", 150);
+            addDecorButton(buyGrid, "Bubbler", 50, true);
+            addDecorButton(buyGrid, "EggPus", 500, true);
             mainDecorTable.add(buyGrid).expandX().fillX();
         } else {
             // Sell Section: 15 spots grid (3 rows of 5)
@@ -142,7 +144,7 @@ public class ShopScreen extends ScreenAdapter {
                     sellGrid.add(sellBtn).width(320).height(160).pad(10);
                 } else {
                     style.up = skin.newDrawable("white", Color.GRAY);
-                    style.fontColor = Color.WHITE;
+                    style.fontColor = Color.BLACK;
                     TextButton sellBtn = new TextButton("Spot " + (i + 1) + "\n[EMPTY]", style);
                     sellBtn.getLabel().setFontScale(2.0f);
                     sellBtn.setDisabled(true);
@@ -152,7 +154,7 @@ public class ShopScreen extends ScreenAdapter {
                 if ((i + 1) % 5 == 0) sellGrid.row();
             }
 
-            // Add Fixed items (Chest/Bubbler) at the bottom
+            // Add Fixed items (Chest/Bubbler/EggPus) at the bottom
             sellGrid.row().padTop(30);
             for (final Decor decor : gameManager.getDecorItems()) {
                 if (decor.getSlotIndex() == -1) {
@@ -378,14 +380,20 @@ public class ShopScreen extends ScreenAdapter {
     }
 
     private void addDecorButton(Table table, final String type, final float price) {
-        String label = type + "\n$" + (int)price;
+        addDecorButton(table, type, price, false);
+    }
+
+    private void addDecorButton(Table table, final String type, final float price, final boolean isPremium) {
+        String label = type + "\n" + (int)price + (isPremium ? " Pearls" : "");
+        if (!isPremium) label = type + "\n$" + (int)price;
 
         TextButton button = new TextButton(label, skin);
         button.getLabel().setFontScale(2.2f);
+        if (isPremium) button.getLabel().setColor(new Color(0.7f, 0.9f, 1f, 1f));
 
-        // Check if the item is already owned (for Bubbler and Chest)
+        // Check if the item is already owned (for Bubbler, Chest, EggPus)
         boolean isOwned = false;
-        if (type.equals("Bubbler") || type.equals("Treasure Chest")) {
+        if (type.equals("Bubbler") || type.equals("Treasure Chest") || type.equals("EggPus")) {
             for (Decor d : gameManager.getDecorItems()) {
                 if (d.getType().equals(type)) {
                     isOwned = true;
@@ -405,16 +413,23 @@ public class ShopScreen extends ScreenAdapter {
             public void clicked(InputEvent event, float x, float y) {
                 if (button.isDisabled()) return;
 
-                if (gameManager.getMoney() < price) {
-                    showInsufficientFundsDialog(false);
-                    return;
+                if (isPremium) {
+                    if (gameManager.getPearls() < price) {
+                        showInsufficientFundsDialog(true);
+                        return;
+                    }
+                } else {
+                    if (gameManager.getMoney() < price) {
+                        showInsufficientFundsDialog(false);
+                        return;
+                    }
                 }
 
                 if (type.equals("Green Fern") || type.equals("Red Kelp") ||
-                    type.equals("Purple Coral") || type.equals("Amazon Sword")) {
+                    type.equals("Purple Coral") || type.equals("Amazon Sword") || type.equals("YardRock")) {
                     showSlotPicker(type, price);
                 } else {
-                    shop.buyDecor(type, price, -1);
+                    shop.buyDecor(type, price, -1, isPremium);
                     updateCurrencyLabels();
                     refreshDecorTab();
                 }

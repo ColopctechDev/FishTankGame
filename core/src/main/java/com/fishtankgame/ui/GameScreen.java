@@ -1,6 +1,7 @@
 package com.fishtankgame.ui;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -8,11 +9,14 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.CheckBox;
+import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.fishtankgame.FishTankGame;
@@ -51,6 +55,8 @@ public class GameScreen extends ScreenAdapter {
     private TextButton sellPearlButton;
     private float checkAdultsTimer = 0;
 
+    private boolean showSplashOnStart = true;
+
     public GameScreen(FishTankGame game, GameManager gameManager, Shop shop, SpriteBatch batch, List<Bubble> backgroundBubbles, Texture background, Skin skin) {
         this.game = game;
         this.gameManager = gameManager;
@@ -62,6 +68,9 @@ public class GameScreen extends ScreenAdapter {
 
         viewport = new ExtendViewport(FishTankGame.VIRTUAL_WIDTH, FishTankGame.VIRTUAL_HEIGHT);
         stage = new Stage(viewport, batch);
+
+        Preferences prefs = Gdx.app.getPreferences("FishTankGamePrefs");
+        showSplashOnStart = prefs.getBoolean("showSplash", true);
 
         // Common translucent background (slightly darker for better contrast)
         com.badlogic.gdx.scenes.scene2d.utils.Drawable translucentBg = skin.newDrawable("white", new Color(0, 0, 0, 0.5f));
@@ -207,6 +216,77 @@ public class GameScreen extends ScreenAdapter {
             }
         });
         stage.addActor(showUiButton);
+
+        if (showSplashOnStart) {
+            showSplashScreen();
+        }
+    }
+
+    private void showSplashScreen() {
+        final Dialog dialog = new Dialog("", skin);
+        Table content = dialog.getContentTable();
+        content.pad(50);
+
+        // Heading: DIVE INTO THE FUN!
+        Label title = new Label("DIVE INTO THE FUN!", skin, "subtitle");
+        title.setFontScale(5.0f); // Twice the previous 2.5f
+        title.setColor(Color.GOLD);
+        content.add(title).padBottom(40).row();
+
+        // Subheading 1: Buy & Sell
+        Label sub1 = new Label("💰 Buy & Sell:", skin);
+        sub1.setFontScale(3.6f); // Twice the previous body scale 1.8f
+        sub1.setColor(Color.CYAN);
+        content.add(sub1).padBottom(5).row();
+
+        Label desc1 = new Label("Trade fish for profit to upgrade your tank!", skin);
+        desc1.setFontScale(1.8f);
+        content.add(desc1).padBottom(20).row();
+
+        // Subheading 2: Bubbles
+        Label sub2 = new Label("🫧 Bubbles:", skin);
+        sub2.setFontScale(3.6f);
+        sub2.setColor(Color.CYAN);
+        content.add(sub2).padBottom(5).row();
+
+        Label desc2 = new Label("Look for the Scuba Guy to keep your fish happy.", skin);
+        desc2.setFontScale(1.8f);
+        content.add(desc2).padBottom(20).row();
+
+        // Subheading 3: Free Eggs
+        Label sub3 = new Label("🥚 Free Eggs:", skin);
+        sub3.setFontScale(3.6f);
+        sub3.setColor(Color.CYAN);
+        content.add(sub3).padBottom(5).row();
+
+        Label desc3 = new Label("The friendly Octopus has a surprise for you!", skin);
+        desc3.setFontScale(1.8f);
+        content.add(desc3).padBottom(40).row();
+
+        Label footer = new Label("Click anywhere to play", skin);
+        footer.setFontScale(2.0f);
+        content.add(footer).padBottom(40).row();
+
+        // Adding a line of space
+        content.add(new Label("", skin)).height(40).row();
+
+        final CheckBox dontShowAgain = new CheckBox(" Don't show this again", skin);
+        dontShowAgain.getLabel().setFontScale(1.8f);
+        content.add(dontShowAgain).padBottom(20).row();
+
+        dialog.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                if (dontShowAgain.isChecked()) {
+                    Preferences prefs = Gdx.app.getPreferences("FishTankGamePrefs");
+                    prefs.putBoolean("showSplash", false);
+                    prefs.flush();
+                }
+                dialog.hide();
+            }
+        });
+
+        dialog.show(stage);
     }
 
     @Override

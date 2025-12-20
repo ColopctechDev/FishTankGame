@@ -31,9 +31,12 @@ public class GameManager {
     private final Map<String, Texture> fishTextures;
     private final Map<String, Texture> decorTextures;
     private final Texture bubbleTexture;
+    private Texture eggTexture;
     private PurchaseHandler purchaseHandler;
 
     private float bubbleSpawnTimer = 0;
+    private float eggPusSpawnTimer = 0;
+    private float eggPusTargetTime = 0;
 
     // Dynamic tank bounds
     private float tankWidth = FishTankGame.VIRTUAL_WIDTH;
@@ -51,14 +54,22 @@ public class GameManager {
         fishTextures = new HashMap<>();
         decorTextures = new HashMap<>();
         this.bubbleTexture = bubbleTexture;
+        this.eggTexture = bubbleTexture; // Default to bubble until set
 
-        // Default inventory
-        foodInventory.put(new Food("Sunflower", 1, 10.0), 30);
-        foodInventory.put(new Food("Chia", 10, 50.0), 5); // Add 5 Chia seeds
+        resetEggPusTimer();
+    }
+
+    private void resetEggPusTimer() {
+        eggPusSpawnTimer = 0;
+        eggPusTargetTime = MathUtils.random(30f, 120f);
     }
 
     public void setPurchaseHandler(PurchaseHandler purchaseHandler) {
         this.purchaseHandler = purchaseHandler;
+    }
+
+    public void setEggTexture(Texture eggTexture) {
+        this.eggTexture = eggTexture;
     }
 
     public void purchasePearls(final int amount) {
@@ -77,13 +88,15 @@ public class GameManager {
         }
     }
 
-    public void initDecor(Texture chest, Texture bubbler, Texture plant1, Texture plant2, Texture plant3, Texture plant4) {
+    public void initDecor(Texture chest, Texture bubbler, Texture plant1, Texture plant2, Texture plant3, Texture plant4, Texture yardRock, Texture eggPus) {
         decorTextures.put("Treasure Chest", chest);
         decorTextures.put("Bubbler", bubbler);
         decorTextures.put("Green Fern", plant1);
         decorTextures.put("Red Kelp", plant2);
         decorTextures.put("Purple Coral", plant3);
         decorTextures.put("Amazon Sword", plant4);
+        decorTextures.put("YardRock", yardRock);
+        decorTextures.put("EggPus", eggPus);
 
         decorItems.clear();
         fishList.clear();
@@ -100,23 +113,33 @@ public class GameManager {
         if (type.equals("Green Fern") || type.equals("Red Kelp") ||
             type.equals("Purple Coral") || type.equals("Amazon Sword")) {
             scale = 1.2f;
+        } else if (type.equals("YardRock")) {
+            scale = 0.5f;
+            y = 0;
         } else if (type.equals("Bubbler")) {
             scale = 0.3f;
             y = 0;
         } else if (type.equals("Treasure Chest")) {
             scale = 0.32f;
             y = 0;
+        } else if (type.equals("EggPus")) {
+            scale = 0.4f;
+            y = 0;
         }
 
         if (slotIndex == -1) {
-            // Check if bubbler or chest already exists and remove (Backward compatible removeIf)
+            // Check if fixed items already exist and remove
             Iterator<Decor> it = decorItems.iterator();
             while (it.hasNext()) {
                 if (it.next().getType().equals(type)) {
                     it.remove();
                 }
             }
-            float percent = type.equals("Bubbler") ? 0.25f : 0.70f;
+            float percent = 0.5f;
+            if (type.equals("Bubbler")) percent = 0.25f;
+            else if (type.equals("Treasure Chest")) percent = 0.70f;
+            else if (type.equals("EggPus")) percent = 0.45f;
+
             addDecorCentrally(type, tex, percent, scale, y, -1, price);
         } else {
             addPlantToSlot(type, tex, slotIndex, scale, price);
@@ -193,6 +216,7 @@ public class GameManager {
 
     public void update(float delta) {
         updateDecorBubbles(delta);
+        updateEggPus(delta);
         List<EggObject> hatchedEggs = new ArrayList<>();
         for (EggObject eggObject : new ArrayList<>(eggObjects)) {
             eggObject.update(delta);
@@ -322,6 +346,43 @@ public class GameManager {
             b.update(delta);
             if (b.isOffScreen()) decorBubbles.remove(i);
         }
+    }
+
+    private void updateEggPus(float delta) {
+        Decor eggPus = null;
+        for (Decor d : decorItems) {
+            if (d.getType().equals("EggPus")) {
+                eggPus = d;
+                break;
+            }
+        }
+        if (eggPus != null) {
+            eggPusSpawnTimer += delta;
+            if (eggPusSpawnTimer >= eggPusTargetTime) {
+                tossEggFromEggPus(eggPus);
+                resetEggPusTimer();
+            }
+        }
+    }
+
+    private void tossEggFromEggPus(Decor eggPus) {
+        float roll = MathUtils.random(0f, 100f);
+        String breed = "Goldfish";
+        double price = 5;
+        boolean premium = false;
+
+        if (roll <= 30.0f) { breed = "Goldfish"; price = 5; }
+        else if (roll <= 52.0f) { breed = "Blue Tang"; price = 15; }
+        else if (roll <= 70.0f) { breed = "Clownfish"; price = 30; }
+        else if (roll <= 82.0f) { breed = "Angelfish"; price = 20; }
+        else if (roll <= 90.0f) { breed = "Betafish"; price = 25; }
+        else if (roll <= 95.0f) { breed = "Tigerfish"; price = 50; }
+        else if (roll <= 97.5f) { breed = "Koi"; price = 100; premium = true; }
+        else { breed = "Rainbowfish"; price = 250; premium = true; }
+
+        float x = eggPus.getPosition().x + eggPus.getBounds().width / 2f;
+        float y = eggPus.getPosition().y + eggPus.getBounds().height / 2f;
+        eggObjects.add(new EggObject(new Egg(breed, 1, price, premium), eggTexture, x, y));
     }
 
     public List<Bubble> getDecorBubbles() { return decorBubbles; }
@@ -481,7 +542,7 @@ public class GameManager {
     public void dropEgg(Egg egg) {
         float x = MathUtils.random(tankWidth * 0.2f, tankWidth * 0.8f);
         float y = tankHeight - 16;
-        eggObjects.add(new EggObject(egg, bubbleTexture, x, y));
+        eggObjects.add(new EggObject(egg, eggTexture, x, y));
     }
 
     public List<Fish> getFishList() { return fishList; }

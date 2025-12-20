@@ -21,8 +21,8 @@ public class EggObject {
         this.position = new Vector2(x, y);
         this.velocity = new Vector2(0, -MathUtils.random(12.5f, 25f)); // Sinking speed
 
-        // Egg size increased (4x the original 16 to be 300% bigger)
-        float size = 64;
+        // Egg size adjusted (Reduced to 32 from 64)
+        float size = 32;
         this.bounds = new Rectangle(x, y, size, size);
         this.floorY = MathUtils.random(30f, 50f); // Random floor position
 

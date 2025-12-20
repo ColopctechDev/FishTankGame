@@ -22,6 +22,7 @@ public class FishTankGame extends Game {
     public static final float VIRTUAL_WIDTH = 1920;
     public static final float VIRTUAL_HEIGHT = 1080;
 
+    private final PlatformInterface platform;
     private SpriteBatch batch;
     private GameManager gameManager;
     private Shop shop;
@@ -39,6 +40,10 @@ public class FishTankGame extends Game {
     private Sound bubblerSound;
     private long bubblerSoundId = -1;
 
+    public FishTankGame(PlatformInterface platform) {
+        this.platform = platform;
+    }
+
     @Override
     public void create() {
         batch = new SpriteBatch();
@@ -50,6 +55,9 @@ public class FishTankGame extends Game {
         shop = new Shop(gameManager);
 
         background = loadTexture("background.png");
+
+        // Load Egg Texture
+        gameManager.setEggTexture(loadTexture("TF2Coconut.png"));
 
         // Load Sounds
         waterAmbient = Gdx.audio.newSound(Gdx.files.internal("sounds/water_sound.wav"));
@@ -70,10 +78,12 @@ public class FishTankGame extends Game {
         gameManager.initDecor(
                 loadTexture("decor/chest.png"),
                 loadTexture("decor/bubbler.png"),
-                fernTex,
+                loadTexture("decor/plant1.png"),
                 loadTexture("decor/plant2.png"),
                 loadTexture("decor/plant3.png"),
-                loadTexture("decor/plant4.png")
+                loadTexture("decor/plant4.png"),
+                loadTexture("decor/YardRock.png"),
+                loadTexture("decor/EggPus.png")
         );
 
         // --- Starting Game Status ---
@@ -135,6 +145,10 @@ public class FishTankGame extends Game {
 
     public void showGameScreen() {
         setScreen(gameScreen);
+    }
+
+    public PlatformInterface getPlatform() {
+        return platform;
     }
 
     @Override

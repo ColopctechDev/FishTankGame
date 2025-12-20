@@ -3,6 +3,7 @@ package com.fishtankgame.lwjgl3;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.fishtankgame.FishTankGame;
+import com.fishtankgame.PlatformInterface;
 
 /** Launches the desktop (LWJGL3) application. */
 public class Lwjgl3Launcher {
@@ -15,7 +16,20 @@ public class Lwjgl3Launcher {
     }
 
     private static Lwjgl3Application createApplication() {
-        return new Lwjgl3Application(new FishTankGame(), getDefaultConfiguration());
+        // Desktop implementation: IAP not supported directly via this interface
+        PlatformInterface desktopPlatform = new PlatformInterface() {
+            @Override
+            public void purchasePearls(int amount, PurchaseCallback callback) {
+                System.out.println("Desktop: Purchase of " + amount + " pearls not implemented.");
+                if (callback != null) callback.onFailure("Not supported on Desktop");
+            }
+
+            @Override
+            public boolean isIAPSupported() {
+                return false;
+            }
+        };
+        return new Lwjgl3Application(new FishTankGame(desktopPlatform), getDefaultConfiguration());
     }
 
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
