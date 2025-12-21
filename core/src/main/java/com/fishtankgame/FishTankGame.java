@@ -86,17 +86,22 @@ public class FishTankGame extends Game {
                 loadTexture("decor/EggPus.png")
         );
 
-        // --- Starting Game Status ---
-        // 1. Initial Fern in position 8
-        gameManager.addPlantToSlot("Green Fern", fernTex, 8, 1.2f, 10.0);
+        // Attempt to load saved game
+        boolean loaded = gameManager.load();
 
-        // 2. Initial Baby Goldfish
-        FishBreed goldfish = FishBreed.GOLDFISH;
-        gameManager.getFishList().add(new Fish("Starter Goldy", goldfish.getName(), 15.0, goldfish.getSpeed(), gameManager.getFishTexture(goldfish.getName()), goldfish.getMaxFillValue(), gameManager));
+        if (!loaded) {
+            // --- Starting Game Status (Only if no save exists) ---
+            // 1. Initial Fern in position 8
+            gameManager.addPlantToSlot("Green Fern", fernTex, 8, 1.2f, 10.0);
 
-        // 3. Initial Baby Angelfish
-        FishBreed angelfish = FishBreed.ANGELFISH;
-        gameManager.getFishList().add(new Fish("Starter Angel", angelfish.getName(), 60.0, angelfish.getSpeed(), gameManager.getFishTexture(angelfish.getName()), angelfish.getMaxFillValue(), gameManager));
+            // 2. Initial Baby Goldfish
+            FishBreed goldfish = FishBreed.GOLDFISH;
+            gameManager.getFishList().add(new Fish("Starter Goldy", goldfish.getName(), 15.0, goldfish.getSpeed(), gameManager.getFishTexture(goldfish.getName()), goldfish.getMaxFillValue(), gameManager));
+
+            // 3. Initial Baby Angelfish
+            FishBreed angelfish = FishBreed.ANGELFISH;
+            gameManager.getFishList().add(new Fish("Starter Angel", angelfish.getName(), 60.0, angelfish.getSpeed(), gameManager.getFishTexture(angelfish.getName()), angelfish.getMaxFillValue(), gameManager));
+        }
 
         bubbles = new ArrayList<>();
         for (int i = 0; i < 20; i++) {
@@ -152,7 +157,18 @@ public class FishTankGame extends Game {
     }
 
     @Override
+    public void pause() {
+        super.pause();
+        if (gameManager != null) {
+            gameManager.save();
+        }
+    }
+
+    @Override
     public void dispose() {
+        if (gameManager != null) {
+            gameManager.save();
+        }
         batch.dispose();
         skin.dispose();
         for (Texture tex : texturesToDispose) {

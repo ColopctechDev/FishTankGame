@@ -1,5 +1,7 @@
 package com.fishtankgame.game;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -12,6 +14,7 @@ import com.fishtankgame.model.FoodPellet;
 import com.fishtankgame.model.EggObject;
 import com.fishtankgame.model.Decor;
 import com.fishtankgame.model.FishBreed;
+import com.google.gson.Gson;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -554,4 +557,162 @@ public class GameManager {
     public void setMoney(double money) { this.money = money; }
     public int getPearls() { return pearls; }
     public void setPearls(int pearls) { this.pearls = pearls; }
+
+    // --- Save/Load Logic ---
+
+    private static class SaveData {
+        double money;
+        int pearls;
+        List<FishSave> fish;
+        List<DecorSave> decor;
+        Map<String, Integer> inventory;
+        List<EggSave> eggs;
+    }
+
+    private static class FishSave {
+        String name;
+        String breed;
+        int fillValue;
+        float x, y;
+    }
+
+    private static class DecorSave {
+        String type;
+        float x, y;
+        float scale;
+        int slotIndex;
+        float xPercent;
+        double purchasePrice;
+    }
+
+    private static class EggSave {
+        String breed;
+        int quantity;
+        double price;
+        boolean premium;
+        float x, y;
+    }
+
+    public void save() {
+        SaveData data = new SaveData();
+        data.money = this.money;
+        data.pearls = this.pearls;
+
+        data.fish = new ArrayList<>();
+        for (Fish f : fishList) {
+            FishSave fs = new FishSave();
+            fs.name = f.getName();
+            fs.breed = f.getBreed();
+            fs.fillValue = f.getFillValue();
+            fs.x = f.getBounds().x; // Using bounds.x for position
+            fs.y = f.getBounds().y;
+            data.fish.add(fs);
+        }
+
+        data.decor = new ArrayList<>();
+        for (Decor d : decorItems) {
+            DecorSave ds = new DecorSave();
+            ds.type = d.getType();
+            ds.x = d.getPosition().x;
+            ds.y = d.getPosition().y;
+            ds.scale = d.getScale();
+            ds.slotIndex = d.getSlotIndex();
+            ds.xPercent = d.getXPercent();
+            ds.purchasePrice = d.getPurchasePrice();
+            data.decor.add(ds);
+        }
+
+        data.inventory = new HashMap<>();
+        for (Map.Entry<Food, Integer> entry : foodInventory.entrySet()) {
+            data.inventory.put(entry.getKey().getType(), entry.getValue());
+        }
+
+        data.eggs = new ArrayList<>();
+        for (EggObject eo : eggObjects) {
+            EggSave es = new EggSave();
+            es.breed = eo.getEggData().breed();
+            es.quantity = eo.getEggData().quantity();
+            es.price = eo.getEggData().price();
+            es.premium = eo.getEggData().isPremium();
+            es.x = eo.getPosition().x;
+            es.y = eo.getPosition().y;
+            data.eggs.add(es);
+        }
+
+        String json = new Gson().toJson(data);
+        Preferences prefs = Gdx.app.getPreferences("FishTankGameSave");
+        prefs.putString("saveData", json);
+        prefs.flush();
+    }
+
+    public boolean load() {
+        Preferences prefs = Gdx.app.getPreferences("FishTankGameSave");
+        String json = prefs.getString("saveData", null);
+        if (json == null) return false;
+
+        try {
+            SaveData data = new Gson().fromJson(json, SaveData.class);
+            this.money = data.money;
+            this.pearls = data.pearls;
+
+            this.fishList.clear();
+            if (data.fish != null) {
+                for (FishSave fs : data.fish) {
+                    Texture tex = fishTextures.get(fs.breed);
+                    if (tex != null) {
+                        FishBreed breedInfo = FishBreed.fromName(fs.breed);
+                        Fish fish = new Fish(fs.name, fs.breed, breedInfo.isPremium() ? fs.fillValue * 5 : fs.fillValue * 2, breedInfo.getSpeed(), tex, breedInfo.getMaxFillValue(), this, new Vector2(fs.x, fs.y));
+                        // We need a way to set fillValue directly or feed it
+                        fish.feed(fs.fillValue);
+                        this.fishList.add(fish);
+                    }
+                }
+            }
+
+            this.decorItems.clear();
+            if (data.decor != null) {
+                for (DecorSave ds : data.decor) {
+                    Texture tex = decorTextures.get(ds.type);
+                    if (tex != null) {
+                        this.decorItems.add(new Decor(ds.type, tex, ds.x, ds.y, ds.scale, ds.slotIndex, ds.xPercent, ds.purchasePrice));
+                    }
+                }
+            }
+
+            this.foodInventory.clear();
+            if (data.inventory != null) {
+                // Reconstruct Food objects - this is a bit tricky as we don't have all Food data here
+                // We'll use defaults for now or lookup from a list if we had one.
+                // Assuming Sunflower, Poppy, etc. are standard.
+                for (Map.Entry<String, Integer> entry : data.inventory.entrySet()) {
+                    Food food = createFoodByType(entry.getKey());
+                    this.foodInventory.put(food, entry.getValue());
+                }
+            }
+
+            this.eggObjects.clear();
+            if (data.eggs != null) {
+                for (EggSave es : data.eggs) {
+                    this.eggObjects.add(new EggObject(new Egg(es.breed, es.quantity, es.price, es.premium), eggTexture, es.x, es.y));
+                }
+            }
+
+            return true;
+        } catch (Exception e) {
+            Gdx.app.error("GameManager", "Failed to load save data", e);
+            return false;
+        }
+    }
+
+    private Food createFoodByType(String type) {
+        if (type.equals("Sunflower")) return new Food("Sunflower", 1, 1.0, false);
+        if (type.equals("Poppy")) return new Food("Poppy", 2, 5.0, false);
+        if (type.equals("Flax")) return new Food("Flax", 4, 15.0, false);
+        if (type.equals("Hemp")) return new Food("Hemp", 8, 40.0, false);
+        if (type.equals("Chia")) return new Food("Chia", 12, 100.0, false);
+        if (type.equals("Sesame")) return new Food("Sesame", 20, 250.0, false);
+        if (type.equals("Pumpkin")) return new Food("Pumpkin", 5, 1.0, true);
+        if (type.equals("Quinoa")) return new Food("Quinoa", 15, 5.0, true);
+        return new Food(type, 1, 1.0, false);
+    }
 }
