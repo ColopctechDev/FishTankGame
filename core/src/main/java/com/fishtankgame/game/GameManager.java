@@ -60,7 +60,7 @@ public class GameManager {
         this.eggTexture = bubbleTexture; // Default to bubble until set
 
         // Add starting inventory
-        foodInventory.put(new Food("Sunflower", 1, 1.0, false), 30);
+        foodInventory.put(new Food("Sunflower", 3, 10.0, false), 10);
 
         resetEggPusTimer();
     }
@@ -705,14 +705,14 @@ public class GameManager {
     }
 
     private Food createFoodByType(String type) {
-        if (type.equals("Sunflower")) return new Food("Sunflower", 1, 1.0, false);
-        if (type.equals("Poppy")) return new Food("Poppy", 2, 5.0, false);
-        if (type.equals("Flax")) return new Food("Flax", 4, 15.0, false);
-        if (type.equals("Hemp")) return new Food("Hemp", 8, 40.0, false);
-        if (type.equals("Chia")) return new Food("Chia", 12, 100.0, false);
-        if (type.equals("Sesame")) return new Food("Sesame", 20, 250.0, false);
-        if (type.equals("Pumpkin")) return new Food("Pumpkin", 5, 1.0, true);
-        if (type.equals("Quinoa")) return new Food("Quinoa", 15, 5.0, true);
+        if (type.equals("Sunflower")) return new Food("Sunflower", 3, 10.0, false);
+        if (type.equals("Poppy")) return new Food("Poppy", 6, 20.0, false);
+        if (type.equals("Flax")) return new Food("Flax", 8, 30.0, false);
+        if (type.equals("Sesame")) return new Food("Sesame", 10, 40.0, false);
+        if (type.equals("Chia")) return new Food("Chia", 15, 50.0, false);
+        if (type.equals("Hemp")) return new Food("Hemp", 22, 75.0, false);
+        if (type.equals("Pumpkin")) return new Food("Pumpkin", 50, 20.0, true);
+        if (type.equals("Quinoa")) return new Food("Quinoa", 75, 40.0, true);
         return new Food(type, 1, 1.0, false);
     }
 }

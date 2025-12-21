@@ -27,12 +27,7 @@ public class Shop {
     }
 
     public void buyFood(Food food) {
-        int quantity = 10; // Default
-        if (food.getType().equals("Sunflower")) quantity = 30;
-        else if (food.getType().equals("Poppy")) quantity = 20;
-        else if (food.getType().equals("Flax")) quantity = 15;
-        else if (food.getType().equals("Hemp") || food.getType().equals("Chia") || food.getType().equals("Sesame")) quantity = 15;
-        else if (food.getType().equals("Pumpkin") || food.getType().equals("Quinoa")) quantity = 10;
+        int quantity = 10; // All food types now give 10 pellets per purchase
 
         if (food.isPremium()) {
             if (gameManager.getPearls() >= food.getPrice()) {

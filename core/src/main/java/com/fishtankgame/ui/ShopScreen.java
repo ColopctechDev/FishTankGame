@@ -107,35 +107,74 @@ public class ShopScreen extends ScreenAdapter {
             addDecorButton(buyGrid, "EggPus", 500, true);
             mainDecorTable.add(buyGrid).expandX().fillX();
         } else {
-            // Sell Section: 15 spots grid (3 rows of 5)
+            // Sell Section: 15 generic slots + 3 fixed items on the side (6 buttons per row)
             Table sellGrid = new Table();
             sellGrid.top();
 
-            for (int i = 0; i < 15; i++) {
-                final int slotIndex = i;
-                Decor foundDecor = null;
+            String[] fixedTypes = {"Treasure Chest", "Bubbler", "EggPus"};
+            Color goldColor = new Color(1f, 0.843f, 0f, 1f);
+
+            for (int row = 0; row < 3; row++) {
+                // Add 5 generic slots
+                for (int col = 0; col < 5; col++) {
+                    final int slotIndex = row * 5 + col;
+                    Decor foundDecor = null;
+                    for (Decor d : gameManager.getDecorItems()) {
+                        if (d.getSlotIndex() == slotIndex) {
+                            foundDecor = d;
+                            break;
+                        }
+                    }
+
+                    TextButton.TextButtonStyle style = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+                    if (foundDecor != null) {
+                        final Decor decorToSell = foundDecor;
+                        int sellPrice = (int) Math.floor(foundDecor.getPurchasePrice() / 2.0);
+                        style.up = skin.newDrawable("white", Color.BLACK);
+                        style.fontColor = Color.WHITE;
+                        String displayName = foundDecor.getType().equals("EggPus") ? "Octopus" : foundDecor.getType();
+                        TextButton sellBtn = new TextButton(displayName + "\n$" + sellPrice, style);
+                        sellBtn.getLabel().setFontScale(2.0f);
+                        sellBtn.addListener(new ClickListener() {
+                            @Override
+                            public void clicked(InputEvent event, float x, float y) {
+                                shop.sellDecor(decorToSell);
+                                updateCurrencyLabels();
+                                refreshDecorTab();
+                            }
+                        });
+                        sellGrid.add(sellBtn).width(270).height(160).pad(5);
+                    } else {
+                        style.up = skin.newDrawable("white", Color.GRAY);
+                        style.fontColor = Color.BLACK;
+                        TextButton sellBtn = new TextButton("Spot " + (slotIndex + 1) + "\n[EMPTY]", style);
+                        sellBtn.getLabel().setFontScale(2.0f);
+                        sellBtn.setDisabled(true);
+                        sellGrid.add(sellBtn).width(270).height(160).pad(5);
+                    }
+                }
+
+                // Add 1 fixed item on the side (6th column)
+                final String fixedType = fixedTypes[row];
+                Decor foundFixed = null;
                 for (Decor d : gameManager.getDecorItems()) {
-                    if (d.getSlotIndex() == slotIndex) {
-                        foundDecor = d;
+                    if (d.getType().equals(fixedType) && d.getSlotIndex() == -1) {
+                        foundFixed = d;
                         break;
                     }
                 }
 
-                // Create a unique style for this button
-                TextButton.TextButtonStyle style = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+                TextButton.TextButtonStyle fStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+                String displayName = fixedType.equals("EggPus") ? "Octopus" : fixedType;
 
-                if (foundDecor != null) {
-                    final Decor decorToSell = foundDecor;
-                    int sellPrice = (int) Math.floor(foundDecor.getPurchasePrice() / 2.0);
-
-                    style.up = skin.newDrawable("white", Color.BLACK);
-                    style.fontColor = Color.WHITE;
-
-                    String displayName = foundDecor.getType().equals("EggPus") ? "Octopus" : foundDecor.getType();
-                    TextButton sellBtn = new TextButton(displayName + "\n$" + sellPrice, style);
-                    sellBtn.getLabel().setFontScale(2.0f);
-
-                    sellBtn.addListener(new ClickListener() {
+                if (foundFixed != null) {
+                    final Decor decorToSell = foundFixed;
+                    int sellPrice = (int) Math.floor(foundFixed.getPurchasePrice() / 2.0);
+                    fStyle.up = skin.newDrawable("white", goldColor);
+                    fStyle.fontColor = Color.BLACK;
+                    TextButton fixedBtn = new TextButton(displayName + "\nSELL $" + sellPrice, fStyle);
+                    fixedBtn.getLabel().setFontScale(2.0f);
+                    fixedBtn.addListener(new ClickListener() {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
                             shop.sellDecor(decorToSell);
@@ -143,56 +182,20 @@ public class ShopScreen extends ScreenAdapter {
                             refreshDecorTab();
                         }
                     });
-                    sellGrid.add(sellBtn).width(320).height(160).pad(10);
+                    sellGrid.add(fixedBtn).width(270).height(160).pad(5);
                 } else {
-                    style.up = skin.newDrawable("white", Color.GRAY);
-                    style.fontColor = Color.BLACK;
-                    TextButton sellBtn = new TextButton("Spot " + (i + 1) + "\n[EMPTY]", style);
-                    sellBtn.getLabel().setFontScale(2.0f);
-                    sellBtn.setDisabled(true);
-                    sellGrid.add(sellBtn).width(320).height(160).pad(10);
+                    fStyle.up = skin.newDrawable("white", Color.GRAY);
+                    fStyle.fontColor = Color.DARK_GRAY;
+                    TextButton fixedBtn = new TextButton(displayName + "\n[NOT OWNED]", fStyle);
+                    fixedBtn.getLabel().setFontScale(2.0f);
+                    fixedBtn.setDisabled(true);
+                    sellGrid.add(fixedBtn).width(270).height(160).pad(5);
                 }
-
-                if ((i + 1) % 5 == 0) sellGrid.row();
-            }
-
-            // Add Fixed items (Chest/Bubbler/EggPus) at the bottom
-            sellGrid.row().padTop(30);
-            for (final Decor decor : gameManager.getDecorItems()) {
-                if (decor.getSlotIndex() == -1) {
-                    int sellPrice = (int) Math.floor(decor.getPurchasePrice() / 2.0);
-                    TextButton.TextButtonStyle style = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
-                    style.up = skin.newDrawable("white", Color.BLACK);
-                    style.fontColor = Color.WHITE;
-
-                    String displayName = decor.getType().equals("EggPus") ? "Octopus" : decor.getType();
-                    TextButton fixedSellBtn = new TextButton(displayName + "\n$" + sellPrice, style);
-                    fixedSellBtn.getLabel().setFontScale(2.0f);
-                    fixedSellBtn.addListener(new ClickListener() {
-                        @Override
-                        public void clicked(InputEvent event, float x, float y) {
-                            shop.sellDecor(decor);
-                            updateCurrencyLabels();
-                            refreshDecorTab();
-                        }
-                    });
-                    sellGrid.add(fixedSellBtn).width(320).height(160).pad(10);
-                }
+                sellGrid.row();
             }
 
             ScrollPane scroll = new ScrollPane(sellGrid, skin);
             mainDecorTable.add(scroll).expand().fill().maxHeight(700).row();
-
-            TextButton cancelBtn = new TextButton("CANCEL", skin);
-            cancelBtn.getLabel().setFontScale(2.5f);
-            cancelBtn.addListener(new ClickListener() {
-                @Override
-                public void clicked(InputEvent event, float x, float y) {
-                    isDecorBuyMode = true;
-                    refreshDecorTab();
-                }
-            });
-            mainDecorTable.add(cancelBtn).width(300).height(80).pad(20);
         }
 
         decorContent.add(mainDecorTable).expand().fill();
@@ -306,15 +309,15 @@ public class ShopScreen extends ScreenAdapter {
         foodContent.top();
         Table foodGrid = new Table();
         foodGrid.pad(10);
-        addFoodButton(foodGrid, "Sunflower", 10, 1.0);
-        addFoodButton(foodGrid, "Poppy", 20, 3.0);
-        addFoodButton(foodGrid, "Flax", 30, 5.0);
-        addFoodButton(foodGrid, "Sesame", 40, 7.0);
+        addFoodButton(foodGrid, "Sunflower", 10, 3.0);
+        addFoodButton(foodGrid, "Poppy", 20, 6.0);
+        addFoodButton(foodGrid, "Flax", 30, 8.0);
+        addFoodButton(foodGrid, "Sesame", 40, 10.0);
         foodGrid.row();
-        addFoodButton(foodGrid, "Chia", 50, 10.0);
-        addFoodButton(foodGrid, "Hemp", 75, 15.0);
-        addFoodButton(foodGrid, "Pumpkin", 10, 50.0, true);
-        addFoodButton(foodGrid, "Quinoa", 25, 100.0, true);
+        addFoodButton(foodGrid, "Chia", 50, 15.0);
+        addFoodButton(foodGrid, "Hemp", 75, 25.0);
+        addFoodButton(foodGrid, "Pumpkin", 20, 50.0, true);
+        addFoodButton(foodGrid, "Quinoa", 40, 90.0, true);
         foodContent.add(foodGrid).expand().fill();
 
         // --- Decor Content ---
@@ -327,15 +330,39 @@ public class ShopScreen extends ScreenAdapter {
         pearlContent.top();
         Table pearlGrid = new Table();
         pearlGrid.pad(10);
+
+        // Column layout: 100, 550, (space), 1200, 2500
         addPearlPurchaseButton(pearlGrid, 100, "$0.99");
         addPearlPurchaseButton(pearlGrid, 550, "$4.99");
+        pearlGrid.add().width(340); // intentional empty middle column
         addPearlPurchaseButton(pearlGrid, 1200, "$9.99");
         addPearlPurchaseButton(pearlGrid, 2500, "$19.99");
-        pearlGrid.row();
+
+        pearlGrid.row().padTop(50); // intentional space between upper two rows
+
+        // Column layout: (Popular!!), 4000, 7000, 15000, (empty)
+        // Wait, to keep it centered like requested with a 3rd middle column:
+        // Col 1: Popular!!, Col 2: 4000, Col 3: empty, Col 4: 7000, Col 5: 15000
+
+        TextButton.TextButtonStyle popStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+        popStyle.up = skin.newDrawable("white", new Color(1f, 0.843f, 0f, 1f));
+        popStyle.fontColor = Color.BLACK;
+        TextButton popularBtn = new TextButton("Popular!!\n--->", popStyle);
+        popularBtn.getLabel().setFontScale(2.5f);
+        pearlGrid.add(popularBtn).width(340).height(160).pad(10);
+
         addPearlPurchaseButton(pearlGrid, 4000, "$29.99");
+        pearlGrid.add().width(340); // middle column
         addPearlPurchaseButton(pearlGrid, 7000, "$49.99");
         addPearlPurchaseButton(pearlGrid, 15000, "$99.99");
+
+        pearlGrid.row().padTop(100); // intentional space
+
+        // Put exchange button on 3rd row in the middle column
+        pearlGrid.add().colspan(2); // Skip first two columns
         addPearlMoneyExchangeButton(pearlGrid);
+        pearlGrid.add().colspan(2); // Balance the row
+
         pearlContent.add(pearlGrid).expand().fill();
 
         contentStack.add(eggContent);
@@ -375,7 +402,7 @@ public class ShopScreen extends ScreenAdapter {
 
     private void addPearlMoneyExchangeButton(Table table) {
         final int pearlPrice = 200;
-        TextButton button = new TextButton("1 Pearl\n$" + pearlPrice, skin);
+        TextButton button = new TextButton("Exchange $" + pearlPrice + "\nfor 1 Pearl", skin);
         button.getLabel().setFontScale(2.5f);
         button.addListener(new ClickListener() {
             @Override
