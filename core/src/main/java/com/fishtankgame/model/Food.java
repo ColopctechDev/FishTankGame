@@ -3,10 +3,10 @@ package com.fishtankgame.model;
 import java.util.Objects;
 
 public class Food {
-    private String type;
-    private int growthBoost;
-    private double price;
-    private boolean isPremium;
+    private final String type;
+    private final int growthBoost;
+    private final double price;
+    private final boolean isPremium;
 
     public Food(String type, int growthBoost, double price) {
         this(type, growthBoost, price, false);

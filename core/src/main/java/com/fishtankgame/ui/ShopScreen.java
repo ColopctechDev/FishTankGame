@@ -24,25 +24,25 @@ import com.fishtankgame.model.Egg;
 import com.fishtankgame.model.Food;
 
 public class ShopScreen extends ScreenAdapter {
-    private FishTankGame game;
-    private Stage stage;
-    private Viewport viewport;
-    private Skin skin;
-    private Shop shop;
-    private GameManager gameManager;
-    private Label moneyLabel;
-    private Label pearlLabel;
-    private Label activeTabLabel;
+    private final FishTankGame game;
+    private final Stage stage;
+    private final Viewport viewport;
+    private final Skin skin;
+    private final Shop shop;
+    private final GameManager gameManager;
+    private final Label moneyLabel;
+    private final Label pearlLabel;
+    private final Label activeTabLabel;
 
-    private Table eggContent;
-    private Table foodContent;
-    private Table decorContent;
-    private Table pearlContent;
+    private final Table eggContent;
+    private final Table foodContent;
+    private final Table decorContent;
+    private final Table pearlContent;
 
-    private TextButton eggTabButton;
-    private TextButton foodTabButton;
-    private TextButton decorTabButton;
-    private TextButton pearlTabButton;
+    private final TextButton eggTabButton;
+    private final TextButton foodTabButton;
+    private final TextButton decorTabButton;
+    private final TextButton pearlTabButton;
 
     private boolean isDecorBuyMode = true;
 
@@ -331,6 +331,11 @@ public class ShopScreen extends ScreenAdapter {
         addPearlPurchaseButton(pearlGrid, 550, "$4.99");
         addPearlPurchaseButton(pearlGrid, 1200, "$9.99");
         addPearlPurchaseButton(pearlGrid, 2500, "$19.99");
+        pearlGrid.row();
+        addPearlPurchaseButton(pearlGrid, 4000, "$29.99");
+        addPearlPurchaseButton(pearlGrid, 7000, "$49.99");
+        addPearlPurchaseButton(pearlGrid, 15000, "$99.99");
+        addPearlMoneyExchangeButton(pearlGrid);
         pearlContent.add(pearlGrid).expand().fill();
 
         contentStack.add(eggContent);
@@ -363,6 +368,25 @@ public class ShopScreen extends ScreenAdapter {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 gameManager.purchasePearls(amount);
+            }
+        });
+        table.add(button).width(340).height(160).pad(10);
+    }
+
+    private void addPearlMoneyExchangeButton(Table table) {
+        final int pearlPrice = 200;
+        TextButton button = new TextButton("1 Pearl\n$" + pearlPrice, skin);
+        button.getLabel().setFontScale(2.5f);
+        button.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                if (gameManager.getMoney() >= pearlPrice) {
+                    gameManager.setMoney(gameManager.getMoney() - pearlPrice);
+                    gameManager.setPearls(gameManager.getPearls() + 1);
+                    updateCurrencyLabels();
+                } else {
+                    showInsufficientFundsDialog(false);
+                }
             }
         });
         table.add(button).width(340).height(160).pad(10);

@@ -1,14 +1,19 @@
 apply plugin: 'com.android.application'
 
+import java.util.zip.ZipFile
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
 android {
     namespace "com.fishtankgame.android"
-    compileSdk 36
+    compileSdk = 36
 
     ndkVersion "26.1.10909125"
 
     compileOptions {
-      sourceCompatibility JavaVersion.VERSION_11
-      targetCompatibility JavaVersion.VERSION_11
+      sourceCompatibility JavaVersion.VERSION_17
+      targetCompatibility JavaVersion.VERSION_17
+      coreLibraryDesugaringEnabled true
     }
     sourceSets {
         main {
@@ -31,8 +36,8 @@ android {
     }
     defaultConfig {
         applicationId "com.fishtankgame"
-        minSdk 21
-        targetSdk 36
+        minSdk = 24
+        targetSdk = 36
         versionCode 9
         versionName "1.1.6"
     }
@@ -53,12 +58,11 @@ repositories {
     mavenCentral()
 }
 
-configurations {
-    natives
-    all {
-        exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"
-        exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
-    }
+configurations { natives }
+
+configurations.configureEach {
+    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"
+    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
 }
 
 dependencies {
@@ -75,7 +79,9 @@ dependencies {
     natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86_64"
 
     // Google Play Billing Library
-    implementation "com.android.billingclient:billing:7.1.1"
+    implementation "com.android.billingclient:billing:8.2.1"
+
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
 }
 
 tasks.register('copyAndroidNatives') {
@@ -95,7 +101,7 @@ tasks.register('copyAndroidNatives') {
             if (subDir != null) {
                 def outputDir = libsDir.dir(subDir).asFile
                 outputDir.mkdirs()
-                def zipFile = new java.util.zip.ZipFile(jar)
+                def zipFile = new ZipFile(jar)
                 try {
                     def entries = zipFile.entries()
                     while (entries.hasMoreElements()) {
@@ -103,7 +109,7 @@ tasks.register('copyAndroidNatives') {
                         if (!entry.isDirectory() && entry.name.endsWith(".so")) {
                             def outFile = new File(outputDir, new File(entry.name).getName())
                             zipFile.getInputStream(entry).withStream { input ->
-                                java.nio.file.Files.copy(input, outFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                                Files.copy(input, outFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
                             }
                         }
                     }

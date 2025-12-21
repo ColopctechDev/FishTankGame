@@ -34,25 +34,25 @@ import java.util.List;
 import java.util.Map;
 
 public class GameScreen extends ScreenAdapter {
-    private FishTankGame game;
-    private SpriteBatch batch;
-    private GameManager gameManager;
-    private Shop shop;
+    private final FishTankGame game;
+    private final SpriteBatch batch;
+    private final GameManager gameManager;
+    private final Shop shop;
 
-    private Texture background;
-    private List<Bubble> backgroundBubbles;
+    private final Texture background;
+    private final List<Bubble> backgroundBubbles;
 
-    private Stage stage;
-    private Viewport viewport;
-    private Skin skin;
-    private Label moneyLabel;
-    private Label pearlLabel;
-    private Label inventoryLabel;
+    private final Stage stage;
+    private final Viewport viewport;
+    private final Skin skin;
+    private final Label moneyLabel;
+    private final Label pearlLabel;
+    private final Label inventoryLabel;
 
-    private Table uiRoot;
-    private TextButton showUiButton;
-    private TextButton sellButton;
-    private TextButton sellPearlButton;
+    private final Table uiRoot;
+    private final TextButton showUiButton;
+    private final TextButton sellButton;
+    private final TextButton sellPearlButton;
     private float checkAdultsTimer = 0;
 
     private boolean showSplashOnStart = true;

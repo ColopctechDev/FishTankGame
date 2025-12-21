@@ -7,12 +7,12 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 public class EggObject {
-    private Egg eggData;
-    private Vector2 position;
-    private Vector2 velocity;
-    private Texture texture;
-    private Rectangle bounds;
-    private float floorY;
+    private final Egg eggData;
+    private final Vector2 position;
+    private final Vector2 velocity;
+    private final Texture texture;
+    private final Rectangle bounds;
+    private final float floorY;
     private float hatchTimer;
 
     public EggObject(Egg eggData, Texture texture, float x, float y) {
@@ -27,7 +27,7 @@ public class EggObject {
         this.floorY = MathUtils.random(30f, 50f); // Random floor position
 
         // Set hatch timer based on breed info
-        FishBreed breedInfo = FishBreed.fromName(eggData.getBreed());
+        FishBreed breedInfo = FishBreed.fromName(eggData.breed());
         this.hatchTimer = breedInfo.getHatchTime();
     }
 

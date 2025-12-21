@@ -8,12 +8,12 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 public class FoodPellet {
-    private Food foodType;
-    private Vector2 position;
-    private Vector2 velocity;
-    private Texture texture;
-    private Rectangle bounds;
-    private float floorY;
+    private final Food foodType;
+    private final Vector2 position;
+    private final Vector2 velocity;
+    private final Texture texture;
+    private final Rectangle bounds;
+    private final float floorY;
 
     public FoodPellet(Food foodType, Texture texture, float x, float y) {
         this.foodType = foodType;

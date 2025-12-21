@@ -14,13 +14,13 @@ public class Shop {
 
     public void buyEgg(Egg egg) {
         if (egg.isPremium()) {
-            if (gameManager.getPearls() >= egg.getPrice()) {
-                gameManager.setPearls(gameManager.getPearls() - (int) egg.getPrice());
+            if (gameManager.getPearls() >= egg.price()) {
+                gameManager.setPearls(gameManager.getPearls() - (int) egg.price());
                 gameManager.dropEgg(egg);
             }
         } else {
-            if (gameManager.getMoney() >= egg.getPrice()) {
-                gameManager.setMoney(gameManager.getMoney() - egg.getPrice());
+            if (gameManager.getMoney() >= egg.price()) {
+                gameManager.setMoney(gameManager.getMoney() - egg.price());
                 gameManager.dropEgg(egg);
             }
         }

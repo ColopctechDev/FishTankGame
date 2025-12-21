@@ -50,7 +50,7 @@ public class GameManager {
         decorItems = new ArrayList<>();
         decorBubbles = new ArrayList<>();
         money = 50.0;
-        pearls = 1000; // Testing pearls
+        pearls = 9999; // Testing pearls
         fishTextures = new HashMap<>();
         decorTextures = new HashMap<>();
         this.bubbleTexture = bubbleTexture;
@@ -235,10 +235,10 @@ public class GameManager {
                 }
             }
             Egg eggData = eggObject.getEggData();
-            if (fishTextures.containsKey(eggData.getBreed())) {
-                Texture fishTexture = fishTextures.get(eggData.getBreed());
-                FishBreed breedInfo = FishBreed.fromName(eggData.getBreed());
-                fishList.add(new Fish("New Fish", breedInfo.getName(), eggData.getPrice() * 3, breedInfo.getSpeed(), fishTexture, breedInfo.getMaxFillValue(), this, eggObject.getPosition()));
+            if (fishTextures.containsKey(eggData.breed())) {
+                Texture fishTexture = fishTextures.get(eggData.breed());
+                FishBreed breedInfo = FishBreed.fromName(eggData.breed());
+                fishList.add(new Fish("New Fish", breedInfo.getName(), eggData.price() * 3, breedInfo.getSpeed(), fishTexture, breedInfo.getMaxFillValue(), this, eggObject.getPosition()));
             }
         }
         for (Fish fish : fishList) {
@@ -280,19 +280,17 @@ public class GameManager {
             }
         }
 
-        // Backward compatible grouping
-        Map<String, List<Fish>> breedGroups = new HashMap<>();
+        // Only goldfish should have schooling behavior
+        List<Fish> goldfishList = new ArrayList<>();
         for (Fish fish : fishList) {
-            List<Fish> group = breedGroups.get(fish.getBreed());
-            if (group == null) {
-                group = new ArrayList<>();
-                breedGroups.put(fish.getBreed(), group);
+            if (fish.getBreed().equals("Goldfish")) {
+                goldfishList.add(fish);
+            } else {
+                fish.clearAsLeader();
+                fish.setSchoolingLeader(null);
             }
-            group.add(fish);
         }
-        for (Map.Entry<String, List<Fish>> entry : breedGroups.entrySet()) {
-            assignSchoolingLeaderInGroup(entry.getValue());
-        }
+        assignSchoolingLeaderInGroup(goldfishList);
 
         for (Fish fish : fishList) {
             if (fish.getTargetFood() == null && fish.getTargetFish() == null && fish.getTargetEgg() == null) {

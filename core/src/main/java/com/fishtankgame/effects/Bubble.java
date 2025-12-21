@@ -7,11 +7,11 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.graphics.Color;
 
 public class Bubble {
-    private Vector2 position;
-    private float speed;
-    private Texture texture;
-    private float scale;
-    private float tankHeight;
+    private final Vector2 position;
+    private final float speed;
+    private final Texture texture;
+    private final float scale;
+    private final float tankHeight;
 
     public Bubble(Texture texture, float x, float y, float tankHeight) {
         this.texture = texture;

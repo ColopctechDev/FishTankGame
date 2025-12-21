@@ -9,22 +9,22 @@ import com.badlogic.gdx.math.Vector2;
 import com.fishtankgame.game.GameManager;
 
 public class Fish {
-    private String name;
-    private String breed;
+    private final String name;
+    private final String breed;
     private int fillValue;
-    private int maxFillValue;
-    private double price;
-    private float baseSpeed;
-    private Vector2 position;
-    private Vector2 direction;
+    private final int maxFillValue;
+    private final double price;
+    private final float baseSpeed;
+    private final Vector2 position;
+    private final Vector2 direction;
     private boolean isAdult;
-    private TextureRegion textureRegion;
-    private Rectangle bounds;
+    private final TextureRegion textureRegion;
+    private final Rectangle bounds;
     private FoodPellet targetFood;
     private Fish targetFish;
     private EggObject targetEgg;
     private Fish schoolingLeader;
-    private Vector2 schoolingOffset;
+    private final Vector2 schoolingOffset;
     private float chaseCooldown = 0;
     private boolean isLeader = false;
     private float patrolAngle = 0;
@@ -33,8 +33,8 @@ public class Fish {
     private int patrolWall = -1; // -1: not set, 0: top, 1: bottom, 2: left, 3: right
     private boolean isGuardingEgg = false;
     private float wanderTimer = MathUtils.random(2f, 5f);
-    private GameManager gameManager;
-    private boolean isPremium;
+    private final GameManager gameManager;
+    private final boolean isPremium;
 
     private float minScale = 0.053f; // Starting size increased by 33% from 0.04f
     private float maxScale = 0.1f;

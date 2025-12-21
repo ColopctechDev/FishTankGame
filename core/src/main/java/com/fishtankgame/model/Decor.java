@@ -6,14 +6,14 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 public class Decor {
-    private String type;
-    private Vector2 position;
-    private float scale;
-    private Texture texture;
-    private Rectangle bounds;
+    private final String type;
+    private final Vector2 position;
+    private final float scale;
+    private final Texture texture;
+    private final Rectangle bounds;
     private int slotIndex = -1;
-    private float xPercent;
-    private double purchasePrice;
+    private final float xPercent;
+    private final double purchasePrice;
 
     public Decor(String type, Texture texture, float x, float y, float scale, int slotIndex, float xPercent, double purchasePrice) {
         this.type = type;
