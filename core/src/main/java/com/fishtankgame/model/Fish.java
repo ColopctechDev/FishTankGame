@@ -36,7 +36,7 @@ public class Fish {
     private GameManager gameManager;
     private boolean isPremium;
 
-    private float minScale = 0.04f;
+    private float minScale = 0.053f; // Starting size increased by 33% from 0.04f
     private float maxScale = 0.1f;
     private float currentScale;
 
@@ -61,9 +61,9 @@ public class Fish {
         FishBreed breedInfo = FishBreed.fromName(breed);
         this.isPremium = breedInfo.isPremium();
 
-        // Premium fish are twice as big as standard fish
+        // Premium fish scales (Starting size also increased by 33% from 0.08f)
         if (this.isPremium) {
-            this.minScale = 0.08f;
+            this.minScale = 0.106f;
             this.maxScale = 0.2f;
         }
 

@@ -130,7 +130,9 @@ public class ShopScreen extends ScreenAdapter {
 
                     style.up = skin.newDrawable("white", Color.BLACK);
                     style.fontColor = Color.WHITE;
-                    TextButton sellBtn = new TextButton(foundDecor.getType() + "\n$" + sellPrice, style);
+
+                    String displayName = foundDecor.getType().equals("EggPus") ? "Octopus" : foundDecor.getType();
+                    TextButton sellBtn = new TextButton(displayName + "\n$" + sellPrice, style);
                     sellBtn.getLabel().setFontScale(2.0f);
 
                     sellBtn.addListener(new ClickListener() {
@@ -163,7 +165,8 @@ public class ShopScreen extends ScreenAdapter {
                     style.up = skin.newDrawable("white", Color.BLACK);
                     style.fontColor = Color.WHITE;
 
-                    TextButton fixedSellBtn = new TextButton(decor.getType() + "\n$" + sellPrice, style);
+                    String displayName = decor.getType().equals("EggPus") ? "Octopus" : decor.getType();
+                    TextButton fixedSellBtn = new TextButton(displayName + "\n$" + sellPrice, style);
                     fixedSellBtn.getLabel().setFontScale(2.0f);
                     fixedSellBtn.addListener(new ClickListener() {
                         @Override
@@ -178,7 +181,18 @@ public class ShopScreen extends ScreenAdapter {
             }
 
             ScrollPane scroll = new ScrollPane(sellGrid, skin);
-            mainDecorTable.add(scroll).expand().fill().maxHeight(700);
+            mainDecorTable.add(scroll).expand().fill().maxHeight(700).row();
+
+            TextButton cancelBtn = new TextButton("CANCEL", skin);
+            cancelBtn.getLabel().setFontScale(2.5f);
+            cancelBtn.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    isDecorBuyMode = true;
+                    refreshDecorTab();
+                }
+            });
+            mainDecorTable.add(cancelBtn).width(300).height(80).pad(20);
         }
 
         decorContent.add(mainDecorTable).expand().fill();
@@ -384,8 +398,9 @@ public class ShopScreen extends ScreenAdapter {
     }
 
     private void addDecorButton(Table table, final String type, final float price, final boolean isPremium) {
-        String label = type + "\n" + (int)price + (isPremium ? " Pearls" : "");
-        if (!isPremium) label = type + "\n$" + (int)price;
+        String displayName = type.equals("EggPus") ? "Octopus" : type;
+        String label = displayName + "\n" + (int)price + (isPremium ? " Pearls" : "");
+        if (!isPremium) label = displayName + "\n$" + (int)price;
 
         TextButton button = new TextButton(label, skin);
         button.getLabel().setFontScale(2.2f);
@@ -405,7 +420,7 @@ public class ShopScreen extends ScreenAdapter {
         if (isOwned) {
             button.setDisabled(true);
             button.getLabel().setColor(Color.GRAY);
-            button.setText(type + "\n[OWNED]");
+            button.setText(displayName + "\n[OWNED]");
         }
 
         button.addListener(new ClickListener() {
@@ -481,6 +496,7 @@ public class ShopScreen extends ScreenAdapter {
 
         dialog.getContentTable().add(grid);
         TextButton cancelBtn = new TextButton("CANCEL", skin);
+        cancelBtn.getLabel().setFontScale(2.5f);
         cancelBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {

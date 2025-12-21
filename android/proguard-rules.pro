@@ -1,31 +1,29 @@
-# libGDX Proguard Rules
--keep class com.badlogic.gdx.backends.android.AndroidInput* { *; }
--keep class com.badlogic.gdx.backends.android.AndroidAudio* { *; }
--keep class com.badlogic.gdx.backends.android.AndroidGraphics* { *; }
--keep class com.badlogic.gdx.backends.android.AndroidApplication* { *; }
--keep class com.badlogic.gdx.backends.android.AndroidNet* { *; }
--keep class com.badlogic.gdx.backends.android.AndroidFiles* { *; }
--keep class com.badlogic.gdx.backends.android.AndroidThreading* { *; }
--keep class com.badlogic.gdx.backends.android.AndroidEventListener { *; }
--keep class com.badlogic.gdx.backends.android.SurfaceViewWrapper { *; }
--keep class com.badlogic.gdx.backends.android.AndroidLiveWallpaperService { *; }
--keep class com.badlogic.gdx.backends.android.AndroidClipboard { *; }
--keep class com.badlogic.gdx.backends.android.AndroidAccessibility { *; }
+# libGDX Proguard Rules - DISABLE OBFUSCATION
+# This prevents different classes from being renamed to the same letter (e.g., 'a'),
+# which causes the "Attempt to add pool with already existing class" crash.
+-dontobfuscate
 
-# Keeping all natives
--keep class com.badlogic.gdx.physics.box2d.World { *; }
--keep class com.badlogic.gdx.physics.box2d.ContactListener { *; }
+-keep class com.badlogic.** { *; }
+-keep enum com.badlogic.** { *; }
+-dontwarn com.badlogic.**
 
-# Keep the platform interface and its callbacks
+# Keep your game logic entirely
+-keep class com.fishtankgame.** { *; }
+-keep enum com.fishtankgame.** { *; }
+
+# Keep the platform interface and all its implementations
 -keep class com.fishtankgame.PlatformInterface* { *; }
+-keep interface com.fishtankgame.PlatformInterface* { *; }
 
 # Google Play Billing Library
 -keep class com.android.billingclient.** { *; }
+-dontwarn com.android.billingclient.**
 
-# General libGDX
--dontwarn com.badlogic.gdx.backends.android.AndroidFragmentApplication
--dontwarn com.badlogic.gdx.utils.GdxBuild
--dontwarn com.badlogic.gdx.physics.box2d.gwt.**
--dontwarn com.badlogic.gdx.jnigen.**
--keepattributes Signature
--keepattributes *Annotation*
+# Android-specific keeps
+-keep class com.badlogic.gdx.backends.android.** { *; }
+-keepattributes Signature, *Annotation*, EnclosingMethod, InnerClasses
+
+# Native method handling
+-keepclasseswithmembernames class * {
+    native <methods>;
+}

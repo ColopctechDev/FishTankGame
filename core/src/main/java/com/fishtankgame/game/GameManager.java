@@ -56,6 +56,9 @@ public class GameManager {
         this.bubbleTexture = bubbleTexture;
         this.eggTexture = bubbleTexture; // Default to bubble until set
 
+        // Add starting inventory
+        foodInventory.put(new Food("Sunflower", 1, 1.0, false), 30);
+
         resetEggPusTimer();
     }
 

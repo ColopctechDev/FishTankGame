@@ -181,6 +181,20 @@ public class GameScreen extends ScreenAdapter {
         currencyTable.add(moneyLabel).pad(10).left().row();
         currencyTable.add(pearlLabel).pad(10).left();
 
+        // --- Exit Button (Bottom Middle) ---
+        TextButton exitButton = new TextButton("Exit Game", noBgStyle);
+        exitButton.getLabel().setFontScale(buttonScale);
+        exitButton.getLabel().setColor(Color.WHITE);
+        exitButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                showExitConfirmation();
+            }
+        });
+        Table exitTable = new Table();
+        exitTable.setBackground(translucentBg);
+        exitTable.add(exitButton).pad(20);
+
         // --- Hide UI (Bottom Right) ---
         TextButton hideUiButton = new TextButton("Hide Text", noBgStyle);
         hideUiButton.getLabel().setFontScale(buttonScale);
@@ -200,8 +214,14 @@ public class GameScreen extends ScreenAdapter {
         uiRoot.add(inventoryTable).top().left().expand();
         uiRoot.add(buttonTable).top().right().expand();
         uiRoot.row();
-        uiRoot.add(currencyTable).bottom().left().expand();
-        uiRoot.add(hideTable).bottom().right().expand();
+
+        // Use uniform columns by creating a wrapper table for the bottom row
+        Table bottomRow = new Table();
+        bottomRow.add(currencyTable).left().expandX();
+        bottomRow.add(exitTable).center().expandX();
+        bottomRow.add(hideTable).right().expandX();
+
+        uiRoot.add(bottomRow).bottom().fillX().colspan(2);
 
         // --- Hidden "Show UI" (X) Button (Needs its own Table for background too) ---
         showUiButton = new TextButton("X", skin);
@@ -222,57 +242,86 @@ public class GameScreen extends ScreenAdapter {
         }
     }
 
+    private void showExitConfirmation() {
+        final Dialog dialog = new Dialog("Exit Game", skin);
+        dialog.getTitleLabel().setFontScale(2.5f);
+
+        Label message = new Label("Are you sure you want to exit?", skin);
+        message.setFontScale(2.0f);
+        dialog.getContentTable().add(message).pad(40);
+
+        TextButton okBtn = new TextButton("OK", skin);
+        okBtn.getLabel().setFontScale(2.5f);
+        okBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                Gdx.app.exit();
+            }
+        });
+
+        TextButton cancelBtn = new TextButton("Cancel", skin);
+        cancelBtn.getLabel().setFontScale(2.5f);
+        cancelBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                dialog.hide();
+            }
+        });
+
+        dialog.getButtonTable().add(okBtn).width(200).height(80).pad(20);
+        dialog.getButtonTable().add(cancelBtn).width(200).height(80).pad(20);
+        dialog.show(stage);
+    }
+
     private void showSplashScreen() {
         final Dialog dialog = new Dialog("", skin);
         Table content = dialog.getContentTable();
-        content.pad(50);
+        content.pad(100);
 
         // Heading: DIVE INTO THE FUN!
         Label title = new Label("DIVE INTO THE FUN!", skin, "subtitle");
-        title.setFontScale(5.0f); // Twice the previous 2.5f
+        title.setFontScale(7.0f);
         title.setColor(Color.GOLD);
-        content.add(title).padBottom(40).row();
+        content.add(title).padBottom(80).row();
 
         // Subheading 1: Buy & Sell
         Label sub1 = new Label("💰 Buy & Sell:", skin);
-        sub1.setFontScale(3.6f); // Twice the previous body scale 1.8f
+        sub1.setFontScale(5.0f);
         sub1.setColor(Color.CYAN);
-        content.add(sub1).padBottom(5).row();
+        content.add(sub1).left().padBottom(10).row();
 
         Label desc1 = new Label("Trade fish for profit to upgrade your tank!", skin);
-        desc1.setFontScale(1.8f);
-        content.add(desc1).padBottom(20).row();
+        desc1.setFontScale(2.8f);
+        content.add(desc1).left().padBottom(40).row();
 
         // Subheading 2: Bubbles
         Label sub2 = new Label("🫧 Bubbles:", skin);
-        sub2.setFontScale(3.6f);
+        sub2.setFontScale(5.0f);
         sub2.setColor(Color.CYAN);
-        content.add(sub2).padBottom(5).row();
+        content.add(sub2).left().padBottom(10).row();
 
         Label desc2 = new Label("Look for the Scuba Guy to keep your fish happy.", skin);
-        desc2.setFontScale(1.8f);
-        content.add(desc2).padBottom(20).row();
+        desc2.setFontScale(2.8f);
+        content.add(desc2).left().padBottom(40).row();
 
         // Subheading 3: Free Eggs
         Label sub3 = new Label("🥚 Free Eggs:", skin);
-        sub3.setFontScale(3.6f);
+        sub3.setFontScale(5.0f);
         sub3.setColor(Color.CYAN);
-        content.add(sub3).padBottom(5).row();
+        content.add(sub3).left().padBottom(10).row();
 
         Label desc3 = new Label("The friendly Octopus has a surprise for you!", skin);
-        desc3.setFontScale(1.8f);
-        content.add(desc3).padBottom(40).row();
+        desc3.setFontScale(2.8f);
+        content.add(desc3).left().padBottom(80).row();
 
         Label footer = new Label("Click anywhere to play", skin);
-        footer.setFontScale(2.0f);
-        content.add(footer).padBottom(40).row();
-
-        // Adding a line of space
-        content.add(new Label("", skin)).height(40).row();
+        footer.setFontScale(3.5f);
+        footer.setColor(Color.WHITE);
+        content.add(footer).center().padBottom(60).row();
 
         final CheckBox dontShowAgain = new CheckBox(" Don't show this again", skin);
-        dontShowAgain.getLabel().setFontScale(1.8f);
-        content.add(dontShowAgain).padBottom(20).row();
+        dontShowAgain.getLabel().setFontScale(2.5f);
+        content.add(dontShowAgain).center().padBottom(20).row();
 
         dialog.addListener(new ClickListener() {
             @Override
