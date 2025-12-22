@@ -14,7 +14,7 @@ public enum FishBreed {
     BLUE_GUPPY("Blue Guppy", 60, 1.0f, 40f, false, 40, 120),
     GEMFISH("Gemfish", 300, 4.0f, 240f, true, 350, 70000),
     PLATINUM_AROWANA("Platinum Arowana", 1000, 0.6f, 600f, false, 1000000, 3000000),
-    STARFISH("Starfish", 100, 0.5f, 45f, true, 500, 100000);
+    STARFISH("Starfish", 100, 0.05f, 45f, true, 500, 100000);
 
     private final String name;
     private final int maxFillValue;

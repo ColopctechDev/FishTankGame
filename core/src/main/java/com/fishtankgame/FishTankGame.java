@@ -72,6 +72,12 @@ public class FishTankGame extends Game {
         gameManager.addFishTexture("Tigerfish", loadTexture("fish/Tigerfish.png"));
         gameManager.addFishTexture("Koi", loadTexture("fish/Koifish.png"));
         gameManager.addFishTexture("Rainbowfish", loadTexture("fish/rainbowfish.png"));
+        gameManager.addFishTexture("Tetra", loadTexture("fish/Tetra.png"));
+        gameManager.addFishTexture("Snail", loadTexture("fish/Snail.png"));
+        gameManager.addFishTexture("Blue Guppy", loadTexture("fish/Blue Guppy.png"));
+        gameManager.addFishTexture("Gemfish", loadTexture("fish/GemFish.png"));
+        gameManager.addFishTexture("Platinum Arowana", loadTexture("fish/Platinum Arowana.png"));
+        gameManager.addFishTexture("Starfish", loadTexture("fish/StarTop.png"));
 
         // Load Decor Textures
         Texture fernTex = loadTexture("decor/plant1.png");

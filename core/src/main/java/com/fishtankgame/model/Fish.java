@@ -41,6 +41,7 @@ public class Fish {
     private float currentScale;
 
     private boolean lastFlipX = false;
+    private float flipTimer = 0; // Tracks cooldown between visual flips
     private boolean isBehindDecor = false;
 
     // Tetra specific fields
@@ -63,6 +64,9 @@ public class Fish {
     // Platinum Arowana specific fields
     private float arowanaTargetY = -1;
     private float arowanaChangeHeightTimer = 0;
+
+    // Schooling fields
+    private float schoolingPauseTimer = 0;
 
     public Fish(String name, String breed, double price, float speed, Texture texture, int maxFillValue, GameManager gameManager) {
         this(name, breed, price, speed, texture, maxFillValue, gameManager, null);
@@ -112,6 +116,14 @@ public class Fish {
     }
 
     public void update(float delta) {
+        if (flipTimer > 0) {
+            flipTimer -= delta;
+        }
+
+        if (schoolingPauseTimer > 0) {
+            schoolingPauseTimer -= delta;
+        }
+
         if (breed.equals("Tetra") && isAdult()) {
             globalTetraMoveTimer -= delta;
             if (globalTetraMoveTimer <= 0) {
@@ -164,6 +176,9 @@ public class Fish {
             if (breed.equals("Blue Guppy") && guppyIsSpiraling) {
                 guppyIsSpiraling = false;
                 guppyCenterSpot = null;
+            }
+            if (breed.equals("Goldfish") && schoolingLeader != null) {
+                schoolingPauseTimer = 2.0f;
             }
         }
 
@@ -238,7 +253,7 @@ public class Fish {
                         isGuardingEgg = false;
                     }
                 }
-            } else if (schoolingLeader != null) {
+            } else if (schoolingLeader != null && schoolingPauseTimer <= 0) {
                 Vector2 targetPosition = new Vector2(schoolingLeader.position).add(schoolingOffset);
                 float dist = position.dst(targetPosition);
                 if (dist > 15) {
@@ -287,6 +302,15 @@ public class Fish {
             }
         }
 
+        // Logic to update visual flip state with a 1-second cooldown
+        if (flipTimer <= 0 && Math.abs(direction.x) > 0.1f) {
+            boolean shouldFlip = direction.x < 0;
+            if (shouldFlip != lastFlipX) {
+                lastFlipX = shouldFlip;
+                flipTimer = 1.0f; // 1 second cooldown
+            }
+        }
+
         float currentSpeed = baseSpeed;
         if (!isAdult && breed.equals("Gemfish")) {
             currentSpeed *= 2; // Twice as fast as any other breed at any age (base is already 4.0)
@@ -306,7 +330,11 @@ public class Fish {
         if (breed.equals("Blue Guppy") && isAdult() && guppyIsSpiraling && !isCollidingWall && targetFood == null) {
              // Spiral movement is handled inside its own logic by directly modifying position
         } else if (direction.len() > 0 && currentSpeed > 0) {
-            position.add(direction.cpy().nor().scl(currentSpeed * delta * 60));
+            float finalApplicationSpeed = currentSpeed * delta * 45;
+            if (breed.equals("Blue Guppy")) {
+                finalApplicationSpeed *= 0.3f; // Reduced guppy forward speed to 30%
+            }
+            position.add(direction.cpy().nor().scl(finalApplicationSpeed));
         }
 
         // --- Update Bounds ---
@@ -352,8 +380,9 @@ public class Fish {
             gemfishFlipTimer -= delta;
             if (gemfishFlipTimer <= 0) {
                 gemfishFlipTimer = 2f;
-                lastFlipX = !lastFlipX; // Force flip
-                direction.x = lastFlipX ? -1 : 1; // Sync direction with flip
+                // We bypass the global flip timer here because it's a specific idle logic,
+                // but if you want consistency, we can rely on the direction change.
+                direction.x = -direction.x;
             }
             if (gemfishWaitTimer <= 0) {
                 gemfishTargetSpot = null;
@@ -374,7 +403,7 @@ public class Fish {
         } else {
             gemfishWaitTimer = MathUtils.random(10f, 60f);
             gemfishFlipTimer = 2f;
-            direction.set(0, 0);
+            direction.set(1, 0); // Start facing right
         }
     }
 
@@ -402,8 +431,8 @@ public class Fish {
             }
         } else {
             // Spiraling logic
-            guppySpiralAngle += delta * 5 * guppySpiralDirection;
-            guppySpiralRadius += delta * 40; // Increase radius over time
+            guppySpiralAngle += delta * 0.24f * guppySpiralDirection; // Cut rotation speed to 30% (0.8 * 0.3)
+            guppySpiralRadius += delta * 1.2f; // Cut radial expansion to 30% (4.0 * 0.3)
 
             float targetX = guppyCenterSpot.x + MathUtils.cos(guppySpiralAngle) * guppySpiralRadius;
             float targetY = guppyCenterSpot.y + MathUtils.sin(guppySpiralAngle) * guppySpiralRadius;
@@ -530,10 +559,6 @@ public class Fish {
     }
 
     public void draw(SpriteBatch batch) {
-        if (Math.abs(direction.x) > 0.1f) {
-            lastFlipX = direction.x < 0;
-        }
-
         if (lastFlipX != textureRegion.isFlipX()) {
             textureRegion.flip(true, false);
         }
@@ -541,7 +566,7 @@ public class Fish {
         float angle = direction.angleDeg();
         float snappedAngle = Math.round(angle / 45) * 45;
         float rotation = 0;
-        if (snappedAngle % 90 != 0) {
+        if (!breed.equals("Blue Guppy") && snappedAngle % 90 != 0) {
             if (lastFlipX) {
                 rotation = snappedAngle - 180;
             } else {

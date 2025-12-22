@@ -241,7 +241,7 @@ public class GameManager {
             if (fishTextures.containsKey(eggData.breed())) {
                 Texture fishTexture = fishTextures.get(eggData.breed());
                 FishBreed breedInfo = FishBreed.fromName(eggData.breed());
-                fishList.add(new Fish("New Fish", breedInfo.getName(), eggData.price() * 3, breedInfo.getSpeed(), fishTexture, breedInfo.getMaxFillValue(), this, eggObject.getPosition()));
+                fishList.add(new Fish("New Fish", breedInfo.getName(), breedInfo.getSellPrice(), breedInfo.getSpeed(), fishTexture, breedInfo.getMaxFillValue(), this, eggObject.getPosition()));
             }
         }
         for (Fish fish : fishList) {
@@ -249,7 +249,7 @@ public class GameManager {
         }
         List<Fish> losers = new ArrayList<>();
         for (Fish fish : new ArrayList<>(fishList)) {
-            if (fish.isFighting() && fish.getBounds().overlaps(fish.getTargetFish().getBounds())) {
+            if (fish.isFighting() && fish.getTargetFish() != null && fish.getBounds().overlaps(fish.getTargetFish().getBounds())) {
                 Fish attacker = fish;
                 Fish defender = fish.getTargetFish();
                 if (losers.contains(attacker) || losers.contains(defender)) continue;
@@ -364,25 +364,60 @@ public class GameManager {
             eggPusSpawnTimer += delta;
             if (eggPusSpawnTimer >= eggPusTargetTime) {
                 tossEggFromEggPus(eggPus);
+                spawnFoodFromStarfish();
                 resetEggPusTimer();
+            }
+        }
+    }
+
+    private void spawnFoodFromStarfish() {
+        for (Fish fish : fishList) {
+            if (fish.getBreed().equals("Starfish")) {
+                float roll = MathUtils.random(0f, 100f);
+                Food foodType;
+                if (roll <= 30.0f) foodType = createFoodByType("Sunflower");
+                else if (roll <= 50.0f) foodType = createFoodByType("Poppy");
+                else if (roll <= 65.0f) foodType = createFoodByType("Flax");
+                else if (roll <= 75.0f) foodType = createFoodByType("Sesame");
+                else if (roll <= 85.0f) foodType = createFoodByType("Chia");
+                else if (roll <= 92.5f) foodType = createFoodByType("Hemp");
+                else if (roll <= 97.5f) foodType = createFoodByType("Pumpkin");
+                else foodType = createFoodByType("Quinoa");
+
+                float centerX = fish.getBounds().x + fish.getBounds().width / 2f;
+                float centerY = fish.getBounds().y + fish.getBounds().height / 2f;
+
+                // Star pattern (5 points)
+                float[][] offsets = {{0, 10}, {-10, -5}, {10, -5}, {-7, 7}, {7, 7}};
+                for (float[] offset : offsets) {
+                    foodPellets.add(new FoodPellet(foodType, bubbleTexture, centerX + offset[0], centerY + offset[1]));
+                }
+
+                // Starfish "flip" would be handled in Fish class or here if we have a way to notify
             }
         }
     }
 
     private void tossEggFromEggPus(Decor eggPus) {
         float roll = MathUtils.random(0f, 100f);
-        String breed = "Goldfish";
-        double price = 5;
+        String breed;
+        double price;
         boolean premium = false;
 
-        if (roll <= 30.0f) { breed = "Goldfish"; price = 5; }
-        else if (roll <= 52.0f) { breed = "Blue Tang"; price = 15; }
-        else if (roll <= 70.0f) { breed = "Clownfish"; price = 30; }
-        else if (roll <= 82.0f) { breed = "Angelfish"; price = 20; }
-        else if (roll <= 90.0f) { breed = "Betafish"; price = 25; }
-        else if (roll <= 95.0f) { breed = "Tigerfish"; price = 50; }
-        else if (roll <= 97.5f) { breed = "Koi"; price = 100; premium = true; }
-        else { breed = "Rainbowfish"; price = 250; premium = true; }
+        if (roll <= 20.0f) { breed = "Goldfish"; price = 5; }
+        else if (roll <= 35.0f) { breed = "Blue Tang"; price = 15; }
+        else if (roll <= 45.0f) { breed = "Clownfish"; price = 30; }
+        else if (roll <= 55.0f) { breed = "Angelfish"; price = 20; }
+        else if (roll <= 65.0f) { breed = "Betafish"; price = 25; }
+        else if (roll <= 75.0f) { breed = "Tigerfish"; price = 50; }
+        else if (roll <= 82.0f) { breed = "Tetra"; price = 10; }
+        else if (roll <= 88.0f) { breed = "Snail"; price = 35; }
+        else if (roll <= 93.0f) { breed = "Blue Guppy"; price = 40; }
+        else if (roll <= 96.0f) { breed = "Koi"; price = 100; premium = true; }
+        else if (roll <= 98.0f) { breed = "Rainbowfish"; price = 250; premium = true; }
+        else if (roll <= 99.0f) { breed = "Gemfish"; price = 350; premium = true; }
+        else if (roll <= 99.7f) { breed = "Starfish"; price = 500; premium = true; }
+        else { breed = "Platinum Arowana"; price = 1000000; }
 
         float x = eggPus.getPosition().x + eggPus.getBounds().width / 2f;
         float y = eggPus.getPosition().y + eggPus.getBounds().height / 2f;
@@ -661,7 +696,7 @@ public class GameManager {
                     Texture tex = fishTextures.get(fs.breed);
                     if (tex != null) {
                         FishBreed breedInfo = FishBreed.fromName(fs.breed);
-                        Fish fish = new Fish(fs.name, fs.breed, breedInfo.isPremium() ? fs.fillValue * 5 : fs.fillValue * 2, breedInfo.getSpeed(), tex, breedInfo.getMaxFillValue(), this, new Vector2(fs.x, fs.y));
+                        Fish fish = new Fish(fs.name, fs.breed, breedInfo.getSellPrice(), breedInfo.getSpeed(), tex, breedInfo.getMaxFillValue(), this, new Vector2(fs.x, fs.y));
                         // We need a way to set fillValue directly or feed it
                         fish.feed(fs.fillValue);
                         this.fishList.add(fish);

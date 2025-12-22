@@ -25,8 +25,10 @@ import com.fishtankgame.model.Fish;
 import com.fishtankgame.model.FishBreed;
 import com.fishtankgame.model.Food;
 
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class ShopScreen extends ScreenAdapter {
     private final FishTankGame game;
@@ -51,12 +53,12 @@ public class ShopScreen extends ScreenAdapter {
 
     private boolean isDecorBuyMode = true;
     private boolean isFishBuyMode = true;
+    private final NumberFormat formatter = NumberFormat.getInstance(Locale.US);
 
     private void updateCurrencyLabels() {
         double money = gameManager.getMoney();
-        String moneyText = (money == (long) money) ? String.format("%d", (long) money) : String.format("%.2f", money);
-        moneyLabel.setText("Funds: $" + moneyText);
-        pearlLabel.setText("Pearls: " + gameManager.getPearls());
+        moneyLabel.setText("Funds: $" + formatter.format(money));
+        pearlLabel.setText("Pearls: " + formatter.format(gameManager.getPearls()));
     }
 
     private void refreshFishTab() {
@@ -186,7 +188,7 @@ public class ShopScreen extends ScreenAdapter {
             style.fontColor = Color.BLACK;
         }
 
-        String label = breedName + "\n$" + (int)sellPrice + "\n" + adultCount + " Total";
+        String label = breedName + "\n$" + formatter.format(sellPrice) + " X " + adultCount + " Total";
 
         TextButton sellBtn = new TextButton(label, style);
         sellBtn.getLabel().setFontScale(2.0f);
@@ -296,11 +298,11 @@ public class ShopScreen extends ScreenAdapter {
                     TextButton.TextButtonStyle style = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
                     if (foundDecor != null) {
                         final Decor decorToSell = foundDecor;
-                        int sellPrice = (int) Math.floor(foundDecor.getPurchasePrice() / 2.0);
+                        double sellPrice = Math.floor(foundDecor.getPurchasePrice() / 2.0);
                         style.up = skin.newDrawable("white", Color.BLACK);
                         style.fontColor = Color.WHITE;
                         String displayName = foundDecor.getType().equals("EggPus") ? "Octopus" : foundDecor.getType();
-                        TextButton sellBtn = new TextButton(displayName + "\n$" + sellPrice, style);
+                        TextButton sellBtn = new TextButton(displayName + "\n$" + formatter.format(sellPrice), style);
                         sellBtn.getLabel().setFontScale(2.0f);
                         sellBtn.addListener(new ClickListener() {
                             @Override
@@ -336,16 +338,16 @@ public class ShopScreen extends ScreenAdapter {
 
                 if (foundFixed != null) {
                     final Decor decorToSell = foundFixed;
-                    int sellPrice;
+                    double sellPrice;
                     if (fixedType.equals("Bubbler") || fixedType.equals("EggPus")) {
-                        sellPrice = (int) Math.floor(foundFixed.getPurchasePrice() * 200.0 / 2.0);
+                        sellPrice = Math.floor(foundFixed.getPurchasePrice() * 200.0 / 2.0);
                     } else {
-                        sellPrice = (int) Math.floor(foundFixed.getPurchasePrice() / 2.0);
+                        sellPrice = Math.floor(foundFixed.getPurchasePrice() / 2.0);
                     }
 
                     fStyle.up = skin.newDrawable("white", goldColor);
                     fStyle.fontColor = Color.BLACK;
-                    TextButton fixedBtn = new TextButton(displayName + "\nSELL $" + sellPrice, fStyle);
+                    TextButton fixedBtn = new TextButton(displayName + "\nSELL $" + formatter.format(sellPrice), fStyle);
                     fixedBtn.getLabel().setFontScale(2.0f);
                     fixedBtn.addListener(new ClickListener() {
                         @Override
@@ -565,7 +567,7 @@ public class ShopScreen extends ScreenAdapter {
     }
 
     private void addPearlPurchaseButton(Table table, final int amount, String priceLabel) {
-        TextButton button = new TextButton(amount + " Pearls\n" + priceLabel, skin);
+        TextButton button = new TextButton(formatter.format(amount) + " Pearls\n" + priceLabel, skin);
         button.getLabel().setFontScale(2.5f);
         button.addListener(new ClickListener() {
             @Override
@@ -578,7 +580,7 @@ public class ShopScreen extends ScreenAdapter {
 
     private void addPearlMoneyExchangeButton(Table table) {
         final int pearlPrice = 200;
-        TextButton button = new TextButton("Exchange $" + pearlPrice + "\nfor 1 Pearl", skin);
+        TextButton button = new TextButton("Exchange $" + formatter.format(pearlPrice) + "\nfor 1 Pearl", skin);
         button.getLabel().setFontScale(2.5f);
         button.addListener(new ClickListener() {
             @Override
@@ -626,8 +628,8 @@ public class ShopScreen extends ScreenAdapter {
 
     private void addDecorButton(Table table, final String type, final float price, final boolean isPremium) {
         String displayName = type.equals("EggPus") ? "Octopus" : type;
-        String label = displayName + "\n" + (int)price + (isPremium ? " Pearls" : "");
-        if (!isPremium) label = displayName + "\n$" + (int)price;
+        String label = displayName + "\n" + formatter.format(price) + (isPremium ? " Pearls" : "");
+        if (!isPremium) label = displayName + "\n$" + formatter.format(price);
 
         TextButton button = new TextButton(label, skin);
         button.getLabel().setFontScale(2.2f);
@@ -742,21 +744,13 @@ public class ShopScreen extends ScreenAdapter {
         activeTabLabel.setText(name);
     }
 
-    private String formatPrice(double price) {
-        if (price == (long) price) {
-            return String.format("%d", (long) price);
-        } else {
-            return String.format("%s", price);
-        }
-    }
-
     private void addEggButton(Table table, final FishBreed breed) {
         final String breedName = breed.getName();
         final double price = breed.getBuyPrice();
         final boolean isPremium = breed.isPremium();
 
-        String label = breedName + "\n" + formatPrice(price) + (isPremium ? " Pearls" : "");
-        if (!isPremium) label = breedName + "\n$" + formatPrice(price);
+        String label = breedName + "\n" + formatter.format(price) + (isPremium ? " Pearls" : "");
+        if (!isPremium) label = breedName + "\n$" + formatter.format(price);
 
         TextButton button = new TextButton(label, skin);
         button.getLabel().setFontScale(2.5f);
@@ -788,8 +782,8 @@ public class ShopScreen extends ScreenAdapter {
     }
 
     private void addFoodButton(Table table, final String type, final double price, final double growth, final boolean isPremium) {
-        String label = type + "\n" + formatPrice(price) + (isPremium ? " Pearls" : "");
-        if (!isPremium) label = type + "\n$" + formatPrice(price);
+        String label = type + "\n" + formatter.format(price) + (isPremium ? " Pearls" : "");
+        if (!isPremium) label = type + "\n$" + formatter.format(price);
 
         TextButton button = new TextButton(label, skin);
         button.getLabel().setFontScale(2.5f);

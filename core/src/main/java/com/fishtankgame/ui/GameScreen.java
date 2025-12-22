@@ -7,6 +7,8 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.CheckBox;
@@ -26,11 +28,15 @@ import com.fishtankgame.game.Shop;
 import com.fishtankgame.model.Fish;
 import com.fishtankgame.model.Food;
 import com.fishtankgame.model.FoodPellet;
+import com.fishtankgame.model.Egg;
 import com.fishtankgame.model.EggObject;
 import com.fishtankgame.model.Decor;
+import com.fishtankgame.model.FishBreed;
 
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class GameScreen extends ScreenAdapter {
@@ -50,9 +56,17 @@ public class GameScreen extends ScreenAdapter {
     private final Label inventoryLabel;
 
     private final Table uiRoot;
+    private final Table inventoryTable;
+    private final Table currencyTable;
     private final TextButton showUiButton;
 
     private boolean showSplashOnStart = true;
+    private final NumberFormat formatter = NumberFormat.getInstance(Locale.US);
+
+    // Easter egg tracking
+    private float lastTapX, lastTapY;
+    private int consecutiveTapCount = 0;
+    private static final float TAP_RADIUS = 60f;
 
     public GameScreen(FishTankGame game, GameManager gameManager, Shop shop, SpriteBatch batch, List<Bubble> backgroundBubbles, Texture background, Skin skin) {
         this.game = game;
@@ -81,7 +95,7 @@ public class GameScreen extends ScreenAdapter {
         // --- Inventory (Top Left) ---
         inventoryLabel = new Label("", skin);
         inventoryLabel.setFontScale(3.0f);
-        Table inventoryTable = new Table();
+        inventoryTable = new Table();
         inventoryTable.setBackground(translucentBg);
         inventoryTable.add(inventoryLabel).pad(20);
 
@@ -137,7 +151,7 @@ public class GameScreen extends ScreenAdapter {
         pearlLabel.setFontScale(3.6f);
         pearlLabel.setColor(new Color(0.7f, 0.9f, 1f, 1f)); // Light blue for pearls
 
-        Table currencyTable = new Table();
+        currencyTable = new Table();
         currencyTable.setBackground(translucentBg);
         currencyTable.add(moneyLabel).pad(10).left().row();
         currencyTable.add(pearlLabel).pad(10).left();
@@ -198,8 +212,60 @@ public class GameScreen extends ScreenAdapter {
         });
         stage.addActor(showUiButton);
 
+        // --- Global Stage Listener for Tap Tracking ---
+        stage.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                // Determine region
+                String region = "Tank";
+                Actor target = event.getTarget();
+                if (target != null) {
+                    if (target.isDescendantOf(inventoryTable)) region = "Inventory";
+                    else if (target.isDescendantOf(currencyTable)) region = "Balance";
+                    else if (target.isDescendantOf(buttonTable) || target.isDescendantOf(exitTable) || target.isDescendantOf(hideTable)) {
+                        // Taps on other UI buttons are ignored for the easter egg to avoid accidental triggers
+                        consecutiveTapCount = 0;
+                        return;
+                    }
+                }
+
+                if (consecutiveTapCount == 0) {
+                    lastTapX = x;
+                    lastTapY = y;
+                    consecutiveTapCount = 1;
+                } else {
+                    float dist = Vector2.dst(x, y, lastTapX, lastTapY);
+                    if (dist < TAP_RADIUS) {
+                        consecutiveTapCount++;
+                        handleEasterEggProgress(consecutiveTapCount, region);
+                    } else {
+                        // Reset if tapped elsewhere
+                        lastTapX = x;
+                        lastTapY = y;
+                        consecutiveTapCount = 1;
+                    }
+                }
+            }
+        });
+
         if (showSplashOnStart) {
             showSplashScreen();
+        }
+    }
+
+    private void handleEasterEggProgress(int count, String region) {
+        if (count == 20) {
+            if (region.equals("Inventory")) {
+                Gdx.app.log("GameScreen", "Easter Egg: Dropping one of every egg!");
+                for (FishBreed breed : FishBreed.values()) {
+                    gameManager.dropEgg(new Egg(breed.getName(), 1, breed.getBuyPrice(), breed.isPremium()));
+                }
+                consecutiveTapCount = 0; // Reset after trigger
+            } else if (region.equals("Balance")) {
+                Gdx.app.log("GameScreen", "Easter Egg: Added 1,000 pearls!");
+                gameManager.setPearls(gameManager.getPearls() + 1000);
+                consecutiveTapCount = 0; // Reset after trigger
+            }
         }
     }
 
@@ -317,15 +383,15 @@ public class GameScreen extends ScreenAdapter {
     }
 
     private void updateCurrencyLabels() {
-        moneyLabel.setText("Balance: $" + String.format("%.2f", gameManager.getMoney()));
+        moneyLabel.setText("Balance: $" + formatter.format(gameManager.getMoney()));
         moneyLabel.setColor(gameManager.getMoney() > 10 ? Color.WHITE : Color.RED);
-        pearlLabel.setText("Pearls: " + gameManager.getPearls());
+        pearlLabel.setText("Pearls: " + formatter.format(gameManager.getPearls()));
     }
 
     private void updateInventoryDisplay() {
         StringBuilder inventoryText = new StringBuilder("Inventory:");
         for (Map.Entry<Food, Integer> entry : gameManager.getFoodInventory().entrySet()) {
-            inventoryText.append("\n").append(entry.getKey().getType()).append(": ").append(entry.getValue());
+            inventoryText.append("\n").append(entry.getKey().getType()).append(": ").append(formatter.format(entry.getValue()));
         }
         inventoryLabel.setText(inventoryText.toString());
     }
