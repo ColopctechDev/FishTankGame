@@ -12,7 +12,7 @@ public class Decor {
     private final Texture texture;
     private final Rectangle bounds;
     private int slotIndex = -1;
-    private final float xPercent;
+    private float xPercent;
     private final double purchasePrice;
 
     public Decor(String type, Texture texture, float x, float y, float scale, int slotIndex, float xPercent, double purchasePrice) {
@@ -50,8 +50,16 @@ public class Decor {
         return slotIndex;
     }
 
+    public void setSlotIndex(int slotIndex) {
+        this.slotIndex = slotIndex;
+    }
+
     public float getXPercent() {
         return xPercent;
+    }
+
+    public void setXPercent(float xPercent) {
+        this.xPercent = xPercent;
     }
 
     public float getScale() {

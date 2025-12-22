@@ -14,6 +14,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.fishtankgame.FishTankGame;
@@ -27,6 +28,8 @@ import com.fishtankgame.model.Food;
 
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
@@ -51,9 +54,10 @@ public class ShopScreen extends ScreenAdapter {
     private final TextButton decorTabButton;
     private final TextButton pearlTabButton;
 
-    private boolean isDecorBuyMode = true;
+    private String decorMode = "BUY"; // BUY, SELL, MOVE
     private boolean isFishBuyMode = true;
     private final NumberFormat formatter = NumberFormat.getInstance(Locale.US);
+    private int selectedSlot = -1; // For moving decor
 
     private void updateCurrencyLabels() {
         double money = gameManager.getMoney();
@@ -106,9 +110,13 @@ public class ShopScreen extends ScreenAdapter {
         mainFishTable.add(subTabs).pad(20);
         mainFishTable.row();
 
+        // Sort breeds by price
+        List<FishBreed> allBreeds = new ArrayList<>(Arrays.asList(FishBreed.values()));
+        allBreeds.sort(Comparator.comparingDouble(FishBreed::getBuyPrice));
+
         List<FishBreed> cashBreeds = new ArrayList<>();
         List<FishBreed> pearlBreeds = new ArrayList<>();
-        for (FishBreed breed : FishBreed.values()) {
+        for (FishBreed breed : allBreeds) {
             if (breed.isPremium()) pearlBreeds.add(breed);
             else cashBreeds.add(breed);
         }
@@ -118,13 +126,13 @@ public class ShopScreen extends ScreenAdapter {
             eggGrid.pad(10);
             eggGrid.top(); // Ensure alignment starts from top
 
-            // First 10 cash breeds (2 rows of 5)
+            // Add cash breeds
             for (int i = 0; i < cashBreeds.size(); i++) {
                 addEggButton(eggGrid, cashBreeds.get(i));
                 if ((i + 1) % 5 == 0) eggGrid.row();
             }
 
-            // Final row: Yellow box + 4 Pearl breeds
+            // Add pearl breeds in a new section
             eggGrid.row();
             TextButton.TextButtonStyle yellowStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
             yellowStyle.up = skin.newDrawable("white", new Color(1f, 0.843f, 0f, 1f));
@@ -133,8 +141,12 @@ public class ShopScreen extends ScreenAdapter {
             pearlsBox.getLabel().setFontScale(2.5f);
             eggGrid.add(pearlsBox).width(340).height(160).pad(10);
 
-            for (FishBreed breed : pearlBreeds) {
-                addEggButton(eggGrid, breed);
+            for (int i = 0; i < pearlBreeds.size(); i++) {
+                addEggButton(eggGrid, pearlBreeds.get(i));
+                if ((i + 1) % 4 == 0 && i < pearlBreeds.size() - 1) { // 4 pearl fish per row
+                    eggGrid.row();
+                    eggGrid.add(); //- empty cell for alignment
+                }
             }
 
             ScrollPane scroll = new ScrollPane(eggGrid, skin);
@@ -143,13 +155,12 @@ public class ShopScreen extends ScreenAdapter {
             Table sellGrid = new Table();
             sellGrid.top();
 
-            // First 10 cash breeds (2 rows of 5)
+            // Use the sorted lists for selling as well
             for (int i = 0; i < cashBreeds.size(); i++) {
                 addSellButton(sellGrid, cashBreeds.get(i));
                 if ((i + 1) % 5 == 0) sellGrid.row();
             }
 
-            // Final row: Yellow box + 4 Pearl breeds
             sellGrid.row();
             TextButton.TextButtonStyle yellowStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
             yellowStyle.up = skin.newDrawable("white", new Color(1f, 0.843f, 0f, 1f));
@@ -158,8 +169,12 @@ public class ShopScreen extends ScreenAdapter {
             cashOnlyBox.getLabel().setFontScale(2.5f);
             sellGrid.add(cashOnlyBox).width(340).height(160).pad(10);
 
-            for (FishBreed breed : pearlBreeds) {
-                addSellButton(sellGrid, breed);
+            for (int i = 0; i < pearlBreeds.size(); i++) {
+                addSellButton(sellGrid, pearlBreeds.get(i));
+                if ((i + 1) % 4 == 0 && i < pearlBreeds.size() - 1) {
+                    sellGrid.row();
+                    sellGrid.add(); //- empty cell for alignment
+                }
             }
 
             ScrollPane scroll = new ScrollPane(sellGrid, skin);
@@ -226,7 +241,7 @@ public class ShopScreen extends ScreenAdapter {
         Table mainDecorTable = new Table();
         mainDecorTable.top();
 
-        // Sub-tabs for Decor: BUY and SELL
+        // Sub-tabs for Decor: BUY, SELL, and MOVE
         Table subTabs = new Table();
 
         TextButton.TextButtonStyle activeStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
@@ -237,35 +252,47 @@ public class ShopScreen extends ScreenAdapter {
         inactiveStyle.up = skin.newDrawable("white", Color.GRAY);
         inactiveStyle.fontColor = Color.BLACK;
 
-        TextButton buyModeBtn = new TextButton("BUY", isDecorBuyMode ? activeStyle : inactiveStyle);
-        TextButton sellModeBtn = new TextButton("SELL", isDecorBuyMode ? inactiveStyle : activeStyle);
+        TextButton buyModeBtn = new TextButton("BUY", decorMode.equals("BUY") ? activeStyle : inactiveStyle);
+        TextButton sellModeBtn = new TextButton("SELL", decorMode.equals("SELL") ? activeStyle : inactiveStyle);
+        TextButton moveModeBtn = new TextButton("MOVE", decorMode.equals("MOVE") ? activeStyle : inactiveStyle);
 
         float subTabScale = 2.0f;
         buyModeBtn.getLabel().setFontScale(subTabScale);
         sellModeBtn.getLabel().setFontScale(subTabScale);
+        moveModeBtn.getLabel().setFontScale(subTabScale);
 
         buyModeBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                isDecorBuyMode = true;
+                decorMode = "BUY";
+                selectedSlot = -1;
                 refreshDecorTab();
             }
         });
         sellModeBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                isDecorBuyMode = false;
+                decorMode = "SELL";
+                selectedSlot = -1;
+                refreshDecorTab();
+            }
+        });
+        moveModeBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                decorMode = "MOVE";
+                selectedSlot = -1;
                 refreshDecorTab();
             }
         });
 
         subTabs.add(buyModeBtn).width(300).height(80).pad(10);
         subTabs.add(sellModeBtn).width(300).height(80).pad(10);
+        subTabs.add(moveModeBtn).width(300).height(80).pad(10);
         mainDecorTable.add(subTabs).pad(20);
         mainDecorTable.row();
 
-        if (isDecorBuyMode) {
-            // Buy Section
+        if (decorMode.equals("BUY")) {
             Table buyGrid = new Table();
             addDecorButton(buyGrid, "Green Fern", 10);
             addDecorButton(buyGrid, "Red Kelp", 20);
@@ -273,12 +300,13 @@ public class ShopScreen extends ScreenAdapter {
             addDecorButton(buyGrid, "Amazon Sword", 40);
             buyGrid.row();
             addDecorButton(buyGrid, "YardRock", 10);
-            addDecorButton(buyGrid, "Treasure Chest", 100);
-            addDecorButton(buyGrid, "Bubbler", 50, true);
-            addDecorButton(buyGrid, "EggPus", 500, true);
+            addDecorButton(buyGrid, "Treasure Chest", 100, false, true);
+            addDecorButton(buyGrid, "Bubbler", 50, true, true);
+            addDecorButton(buyGrid, "EggPus", 500, true, true);
             mainDecorTable.add(buyGrid).expandX().fillX();
-        } else {
-            // Sell Section: 15 generic slots + 3 fixed items on the side (6 buttons per row)
+
+        } else if (decorMode.equals("SELL")) {
+            // ... (rest of sell logic is unchanged for now)
             Table sellGrid = new Table();
             sellGrid.top();
 
@@ -286,16 +314,9 @@ public class ShopScreen extends ScreenAdapter {
             Color goldColor = new Color(1f, 0.843f, 0f, 1f);
 
             for (int row = 0; row < 3; row++) {
-                // Add 5 generic slots
                 for (int col = 0; col < 5; col++) {
                     final int slotIndex = row * 5 + col;
-                    Decor foundDecor = null;
-                    for (Decor d : gameManager.getDecorItems()) {
-                        if (d.getSlotIndex() == slotIndex) {
-                            foundDecor = d;
-                            break;
-                        }
-                    }
+                    Decor foundDecor = gameManager.getDecorInSlot(slotIndex);
 
                     TextButton.TextButtonStyle style = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
                     if (foundDecor != null) {
@@ -325,16 +346,8 @@ public class ShopScreen extends ScreenAdapter {
                     }
                 }
 
-                // Add 1 fixed item on the side (6th column)
                 final String fixedType = fixedTypes[row];
-                Decor foundFixed = null;
-                for (Decor d : gameManager.getDecorItems()) {
-                    if (d.getType().equals(fixedType) && d.getSlotIndex() == -1) {
-                        foundFixed = d;
-                        break;
-                    }
-                }
-
+                Decor foundFixed = gameManager.getFixedDecor(fixedType);
                 TextButton.TextButtonStyle fStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
                 String displayName = fixedType.equals("EggPus") ? "Octopus" : fixedType;
 
@@ -370,12 +383,91 @@ public class ShopScreen extends ScreenAdapter {
                 }
                 sellGrid.row();
             }
-
             ScrollPane scroll = new ScrollPane(sellGrid, skin);
+            mainDecorTable.add(scroll).expand().fill().maxHeight(700).row();
+
+        } else if (decorMode.equals("MOVE")) {
+            Table moveGrid = new Table();
+            moveGrid.top().pad(20);
+
+            // --- Plant slots (0-14) ---
+            for (int i = 0; i < 15; i++) {
+                addMoveButton(moveGrid, i);
+                if ((i + 1) % 5 == 0) moveGrid.row();
+            }
+
+            // --- Special slots (15-17) ---
+            moveGrid.row().padTop(40);
+            addMoveButton(moveGrid, 15); // Left
+            addMoveButton(moveGrid, 16); // Center
+            addMoveButton(moveGrid, 17); // Right
+
+            ScrollPane scroll = new ScrollPane(moveGrid, skin);
             mainDecorTable.add(scroll).expand().fill().maxHeight(700).row();
         }
 
         decorContent.add(mainDecorTable).expand().fill();
+    }
+
+    private void addMoveButton(Table table, final int slotIndex) {
+        Decor foundDecor = gameManager.getDecorInSlot(slotIndex);
+
+        TextButton.TextButtonStyle style = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+        String label;
+
+        if (foundDecor != null) {
+            label = foundDecor.getType().equals("EggPus") ? "Octopus" : foundDecor.getType();
+            style.up = skin.newDrawable("white", Color.BLACK);
+            style.fontColor = Color.WHITE;
+        } else {
+            if (slotIndex >= 15) {
+                label = "[SPECIAL SLOT]";
+            } else {
+                label = "[EMPTY]";
+            }
+            style.up = skin.newDrawable("white", Color.GRAY);
+            style.fontColor = Color.BLACK;
+        }
+
+        if (slotIndex == selectedSlot) {
+            style.up = skin.newDrawable("white", Color.GOLD);
+            style.fontColor = Color.BLACK;
+        }
+
+        TextButton moveBtn = new TextButton(label, style);
+        moveBtn.getLabel().setFontScale(2.0f);
+
+        moveBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                Decor selectedDecor = gameManager.getDecorInSlot(selectedSlot);
+
+                if (foundDecor != null) {
+                    // A decor item is in this slot, so select/deselect it
+                    if (selectedSlot == slotIndex) {
+                        selectedSlot = -1; // Deselect
+                    } else {
+                        selectedSlot = slotIndex;
+                    }
+                } else {
+                    // This is an empty slot
+                    if (selectedDecor != null) {
+                        // Check if the move is valid
+                        boolean isMovingSpecial = selectedDecor.getType().equals("Bubbler") || selectedDecor.getType().equals("Treasure Chest") || selectedDecor.getType().equals("EggPus");
+                        if (isMovingSpecial && slotIndex >= 15) {
+                            gameManager.moveDecorToSlot(selectedDecor, slotIndex);
+                            selectedSlot = -1; // Reset selection
+                        } else if (!isMovingSpecial && slotIndex <= 14) {
+                            gameManager.moveDecorToSlot(selectedDecor, slotIndex);
+                            selectedSlot = -1; // Reset selection
+                        }
+                    }
+                }
+                refreshDecorTab(); // Redraw to show selection/move
+            }
+        });
+
+        table.add(moveBtn).width(340).height(180).pad(10);
     }
 
     public ShopScreen(FishTankGame game, Shop shop, GameManager gameManager, Skin skin) {
@@ -556,7 +648,17 @@ public class ShopScreen extends ScreenAdapter {
 
         root.add(contentStack).expand().fill().row();
 
-        // Footer
+        // --- Footer ---
+        Table footer = new Table();
+        TextButton faqButton = new TextButton("FAQ", skin);
+        faqButton.getLabel().setFontScale(2.5f);
+        faqButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                showFaqDialog();
+            }
+        });
+
         TextButton backButton = new TextButton("BACK TO TANK", skin);
         backButton.getLabel().setFontScale(2.5f);
         backButton.addListener(new ClickListener() {
@@ -565,7 +667,82 @@ public class ShopScreen extends ScreenAdapter {
                 game.showGameScreen();
             }
         });
-        root.add(backButton).pad(20, 20, 100, 20).width(500).height(100);
+
+        TextButton rightButton = new TextButton("Leaderboard & Stats", skin);
+        rightButton.getLabel().setFontScale(2.5f);
+
+        footer.add(faqButton).expandX().left().pad(20, 100, 100, 20).width(400).height(100);
+        footer.add(backButton).expandX().center().pad(20, 20, 100, 20).width(500).height(100);
+        footer.add(rightButton).expandX().right().pad(20, 20, 100, 100).width(400).height(100);
+        root.add(footer).fillX().row();
+    }
+
+    private void showFaqDialog() {
+        final Dialog dialog = new Dialog("Frequently Asked Questions", skin);
+        dialog.getTitleLabel().setFontScale(2.5f);
+
+        Table content = new Table(skin);
+        content.pad(20);
+
+        // --- Food Section ---
+        Label foodHeader = new Label("--- FOOD VALUES ---", skin);
+        foodHeader.setFontScale(2.0f);
+        foodHeader.setColor(Color.CYAN);
+        content.add(foodHeader).center().padBottom(10).row();
+
+        String foodInfo = "Sunflower: 3\nPoppy: 6\nFlax: 8\nSesame: 10\nChia: 15\nHemp: 22\nPumpkin (Premium): 50\nQuinoa (Premium): 75";
+        Label foodLabel = new Label(foodInfo, skin);
+        foodLabel.setFontScale(1.8f);
+        foodLabel.setWrap(true);
+        content.add(foodLabel).width(800).padBottom(30).row();
+
+        // --- Fish Section ---
+        Label fishHeader = new Label("--- FISH MATURATION ---", skin);
+        fishHeader.setFontScale(2.0f);
+        fishHeader.setColor(Color.CYAN);
+        content.add(fishHeader).center().padBottom(10).row();
+
+        StringBuilder fishInfo = new StringBuilder();
+        List<FishBreed> allBreeds = new ArrayList<>(Arrays.asList(FishBreed.values()));
+        allBreeds.sort(Comparator.comparingInt(FishBreed::getMaxFillValue));
+        for (FishBreed breed : allBreeds) {
+            fishInfo.append(String.format(Locale.US, "%s: %d food points to mature\n", breed.getName(), breed.getMaxFillValue()));
+        }
+        Label fishLabel = new Label(fishInfo.toString(), skin);
+        fishLabel.setFontScale(1.8f);
+        fishLabel.setWrap(true);
+        fishLabel.setAlignment(Align.center);
+        content.add(fishLabel).width(800).padBottom(30).row();
+
+        // --- General Tips ---
+        Label tipsHeader = new Label("--- TIPS ---", skin);
+        tipsHeader.setFontScale(2.0f);
+        tipsHeader.setColor(Color.CYAN);
+        content.add(tipsHeader).center().padBottom(10).row();
+
+        String tipsInfo = "* Only young fish (that are not yet adults) will eat food.\n"
+                + "* Bettafish will fight each other if they are adults.\n"
+                + "* Angelfish will guard eggs from other fish.\n"
+                + "* You can only sell adult fish.";
+        Label tipsLabel = new Label(tipsInfo, skin);
+        tipsLabel.setFontScale(1.8f);
+        tipsLabel.setWrap(true);
+        content.add(tipsLabel).width(800).padBottom(20).row();
+
+        ScrollPane scrollPane = new ScrollPane(content, skin);
+        dialog.getContentTable().add(scrollPane).width(1000).height(600);
+
+        TextButton okBtn = new TextButton("Close", skin);
+        okBtn.getLabel().setFontScale(2.5f);
+        okBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                dialog.hide();
+            }
+        });
+
+        dialog.getButtonTable().add(okBtn).width(300).height(80).pad(20);
+        dialog.show(stage);
     }
 
     private void addPearlPurchaseButton(Table table, final int amount, String priceLabel) {
@@ -625,10 +802,10 @@ public class ShopScreen extends ScreenAdapter {
     }
 
     private void addDecorButton(Table table, final String type, final float price) {
-        addDecorButton(table, type, price, false);
+        addDecorButton(table, type, price, false, false);
     }
 
-    private void addDecorButton(Table table, final String type, final float price, final boolean isPremium) {
+    private void addDecorButton(Table table, final String type, final float price, final boolean isPremium, final boolean isSpecial) {
         String displayName = type.equals("EggPus") ? "Octopus" : type;
         String label = displayName + "\n" + formatter.format(price) + (isPremium ? " Pearls" : "");
         if (!isPremium) label = displayName + "\n$" + formatter.format(price);
@@ -637,21 +814,13 @@ public class ShopScreen extends ScreenAdapter {
         button.getLabel().setFontScale(2.2f);
         if (isPremium) button.getLabel().setColor(new Color(0.7f, 0.9f, 1f, 1f));
 
-        // Check if the item is already owned (for Bubbler, Chest, EggPus)
-        boolean isOwned = false;
-        if (type.equals("Bubbler") || type.equals("Treasure Chest") || type.equals("EggPus")) {
-            for (Decor d : gameManager.getDecorItems()) {
-                if (d.getType().equals(type)) {
-                    isOwned = true;
-                    break;
-                }
+        // For special items, check if one is already owned
+        if (isSpecial) {
+            if (gameManager.getFixedDecor(type) != null) {
+                 button.setDisabled(true);
+                 button.getLabel().setColor(Color.GRAY);
+                 button.setText(displayName + "\n[OWNED]");
             }
-        }
-
-        if (isOwned) {
-            button.setDisabled(true);
-            button.getLabel().setColor(Color.GRAY);
-            button.setText(displayName + "\n[OWNED]");
         }
 
         button.addListener(new ClickListener() {
@@ -671,21 +840,18 @@ public class ShopScreen extends ScreenAdapter {
                     }
                 }
 
-                if (type.equals("Green Fern") || type.equals("Red Kelp") ||
-                    type.equals("Purple Coral") || type.equals("Amazon Sword") || type.equals("YardRock")) {
-                    showSlotPicker(type, price);
+                if (isSpecial) {
+                    showFixedDecorSlotPicker(type, price, isPremium);
                 } else {
-                    shop.buyDecor(type, price, -1, isPremium);
-                    updateCurrencyLabels();
-                    refreshDecorTab();
+                    showSlotPicker(type, price, isPremium);
                 }
             }
         });
         table.add(button).width(340).height(160).pad(10);
     }
 
-    private void showSlotPicker(final String plantType, final float price) {
-        final Dialog dialog = new Dialog("Pick a Spot", skin);
+    private void showSlotPicker(final String plantType, final float price, final boolean isPremium) {
+        final Dialog dialog = new Dialog("Pick a Plant Spot", skin);
         dialog.getTitleLabel().setFontScale(2.0f);
 
         Table grid = new Table();
@@ -709,15 +875,10 @@ public class ShopScreen extends ScreenAdapter {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
                     if (!slotBtn.isDisabled()) {
-                        if (gameManager.getMoney() >= price) {
-                            shop.buyDecor(plantType, price, slot);
-                            updateCurrencyLabels();
-                            dialog.hide();
-                            refreshDecorTab();
-                        } else {
-                            dialog.hide();
-                            showInsufficientFundsDialog(false);
-                        }
+                        shop.buyDecor(plantType, price, slot, isPremium);
+                        updateCurrencyLabels();
+                        dialog.hide();
+                        refreshDecorTab();
                     }
                 }
             });
@@ -726,6 +887,63 @@ public class ShopScreen extends ScreenAdapter {
         }
 
         dialog.getContentTable().add(grid);
+        TextButton cancelBtn = new TextButton("CANCEL", skin);
+        cancelBtn.getLabel().setFontScale(2.5f);
+        cancelBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                dialog.hide();
+            }
+        });
+        dialog.getButtonTable().add(cancelBtn).width(300).height(80).pad(20);
+        dialog.show(stage);
+    }
+
+    private void showFixedDecorSlotPicker(final String decorType, final double price, final boolean isPremium) {
+        final Dialog dialog = new Dialog("Pick a Special Spot", skin);
+        dialog.getTitleLabel().setFontScale(2.0f);
+
+        Table grid = new Table();
+        String[] slotNames = {"Left", "Center", "Right"};
+        boolean hasOpenSlot = false;
+
+        for (int i = 0; i < 3; i++) {
+            final int slotIndex = 15 + i;
+            boolean isOccupied = gameManager.isSlotOccupied(slotIndex);
+            String label = isOccupied ? "[TAKEN]" : slotNames[i];
+            if (!isOccupied) hasOpenSlot = true;
+
+            TextButton slotBtn = new TextButton(label, skin);
+            slotBtn.getLabel().setFontScale(4.0f);
+            if (isOccupied) {
+                slotBtn.setDisabled(true);
+                slotBtn.getLabel().setColor(Color.RED);
+            }
+
+            slotBtn.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    if (!slotBtn.isDisabled()) {
+                        shop.buyDecor(decorType, price, slotIndex, isPremium);
+                        updateCurrencyLabels();
+                        dialog.hide();
+                        refreshDecorTab();
+                    }
+                }
+            });
+            grid.add(slotBtn).width(400).height(180).pad(10);
+        }
+
+        if (!hasOpenSlot) {
+            dialog.getContentTable().clear();
+            Label noRoomLabel = new Label("No special spots available!\nMove or sell an existing item.", skin);
+            noRoomLabel.setFontScale(2.5f);
+            noRoomLabel.setAlignment(Align.center);
+            dialog.getContentTable().add(noRoomLabel).pad(50);
+        }
+
+        dialog.getContentTable().add(grid);
+
         TextButton cancelBtn = new TextButton("CANCEL", skin);
         cancelBtn.getLabel().setFontScale(2.5f);
         cancelBtn.addListener(new ClickListener() {

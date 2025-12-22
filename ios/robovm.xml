@@ -1,0 +1,29 @@
+<config>
+  <executableName>FishTankGame</executableName>
+  <mainClass>com.fishtankgame.ios.IOSLauncher</mainClass>
+  <os>ios</os>
+  <target>ios</target>
+  <iosInfoPdb>true</iosInfoPdb>
+  <forceLinkClasses>
+    <pattern>com.badlogic.gdx.scenes.scene2d.ui.*</pattern>
+    <pattern>com.google.gson.**</pattern>
+  </forceLinkClasses>
+  <frameworks>
+    <framework>UIKit</framework>
+    <framework>OpenGLES</framework>
+    <framework>QuartzCore</framework>
+    <framework>CoreGraphics</framework>
+    <framework>OpenAL</framework>
+    <framework>AudioToolbox</framework>
+    <framework>AVFoundation</framework>
+  </frameworks>
+  <resources>
+    <resource>
+      <directory>../assets</directory>
+      <includes>
+        <include>**</include>
+      </includes>
+      <skipPngCrush>true</skipPngCrush>
+    </resource>
+  </resources>
+</config>

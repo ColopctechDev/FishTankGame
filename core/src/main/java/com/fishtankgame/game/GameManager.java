@@ -134,7 +134,16 @@ public class GameManager {
         }
 
         if (slotIndex == -1) {
-            // Check if fixed items already exist and remove
+            // Backward compatibility for old fixed item adding
+            // Now we prefer explicit slots for special items too (15-17)
+            // But if -1 is passed, we default to old behavior or reject
+            // Let's assume -1 means "auto-place" for backward compatibility if needed,
+            // but ShopScreen logic is moving towards explicit slots.
+
+            // For now, if we get -1 for special items, we'll try to find an open special slot (15-17)
+            // or just fallback to old central placement.
+
+            // Check if fixed items already exist and remove to prevent duplicates (if we enforce 1 of each)
             Iterator<Decor> it = decorItems.iterator();
             while (it.hasNext()) {
                 if (it.next().getType().equals(type)) {
@@ -148,13 +157,26 @@ public class GameManager {
 
             addDecorCentrally(type, tex, percent, scale, y, -1, price);
         } else {
-            addPlantToSlot(type, tex, slotIndex, scale, price);
+            // New logic: Check if it's a plant slot (0-14) or special slot (15-17)
+            if (slotIndex >= 0 && slotIndex <= 14) {
+                // Ensure only plants go here
+                if (type.equals("Bubbler") || type.equals("Treasure Chest") || type.equals("EggPus")) {
+                    return; // Don't put special items in plant slots
+                }
+                addPlantToSlot(type, tex, slotIndex, scale, price);
+            } else if (slotIndex >= 15 && slotIndex <= 17) {
+                // Ensure only special items go here
+                if (!type.equals("Bubbler") && !type.equals("Treasure Chest") && !type.equals("EggPus")) {
+                    return; // Don't put plants in special slots
+                }
+                addSpecialDecorToSlot(type, tex, slotIndex, scale, y, price);
+            }
         }
     }
 
     public void addPlantToSlot(String name, Texture tex, int slotIndex, float scale, double price) {
         if (slotIndex < 0 || slotIndex >= 15) return;
-        // Backward compatible removeIf
+        // Remove existing item in this slot
         Iterator<Decor> it = decorItems.iterator();
         while (it.hasNext()) {
             if (it.next().getSlotIndex() == slotIndex) {
@@ -171,6 +193,92 @@ public class GameManager {
         float x = xCenter - (scaledWidth / 2f);
 
         decorItems.add(new Decor(name, tex, x, 0, scale, slotIndex, xPercent, price));
+    }
+
+    private void addSpecialDecorToSlot(String name, Texture tex, int slotIndex, float scale, float y, double price) {
+        if (slotIndex < 15 || slotIndex > 17) return;
+
+        // Remove existing item in this slot
+        Iterator<Decor> it = decorItems.iterator();
+        while (it.hasNext()) {
+            if (it.next().getSlotIndex() == slotIndex) {
+                it.remove();
+            }
+        }
+
+        // Also remove any existing instance of this specific special item (enforce 1 of each type)
+        it = decorItems.iterator();
+        while (it.hasNext()) {
+            if (it.next().getType().equals(name)) {
+                it.remove();
+            }
+        }
+
+        float xPercent = 0.5f;
+        if (slotIndex == 15) xPercent = 0.25f; // Left
+        else if (slotIndex == 16) xPercent = 0.5f; // Center
+        else if (slotIndex == 17) xPercent = 0.75f; // Right
+
+        float xCenter = tankWidth * xPercent;
+        float scaledWidth = tex.getWidth() * scale;
+        float x = xCenter - (scaledWidth / 2f);
+
+        decorItems.add(new Decor(name, tex, x, y, scale, slotIndex, xPercent, price));
+    }
+
+    public Decor getDecorInSlot(int slotIndex) {
+        for (Decor d : decorItems) {
+            if (d.getSlotIndex() == slotIndex) {
+                return d;
+            }
+        }
+        return null;
+    }
+
+    public void moveDecorToSlot(Decor decor, int newSlotIndex) {
+        if (decor == null) return;
+
+        // Validation: Plants (0-14) vs Special (15-17)
+        boolean isSpecialItem = decor.getType().equals("Bubbler") || decor.getType().equals("Treasure Chest") || decor.getType().equals("EggPus");
+
+        if (isSpecialItem) {
+            if (newSlotIndex < 15 || newSlotIndex > 17) return; // Special items only in 15-17
+        } else {
+            if (newSlotIndex < 0 || newSlotIndex > 14) return; // Plants only in 0-14
+        }
+
+        // Check if destination slot is occupied
+        if (isSlotOccupied(newSlotIndex)) return;
+
+        decor.setSlotIndex(newSlotIndex);
+
+        float xPercent;
+        if (newSlotIndex >= 15) {
+            if (newSlotIndex == 15) xPercent = 0.25f;
+            else if (newSlotIndex == 16) xPercent = 0.5f;
+            else xPercent = 0.75f;
+        } else {
+            float wallMargin = 40f;
+            float activeWidth = tankWidth - (2 * wallMargin);
+            float slotWidth = activeWidth / 14f;
+            xPercent = (wallMargin + (newSlotIndex * slotWidth)) / tankWidth;
+        }
+
+        float xCenter = tankWidth * xPercent;
+        float scaledWidth = decor.getBounds().width;
+        float x = xCenter - (scaledWidth / 2f);
+
+        decor.updatePosition(x);
+        decor.setXPercent(xPercent);
+    }
+
+    public Decor getFixedDecor(String type) {
+        for (Decor d : decorItems) {
+            if (d.getType().equals(type)) {
+                return d;
+            }
+        }
+        return null;
     }
 
     public boolean isBubblerActive() {

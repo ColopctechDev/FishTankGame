@@ -1,0 +1,39 @@
+apply plugin: 'java-library'
+apply plugin: 'robovm'
+
+sourceSets.main.java.srcDirs = [ "src/main/java" ]
+
+java {
+    sourceCompatibility = 17
+    targetCompatibility = 17
+}
+
+ext {
+    mainClassName = "com.fishtankgame.ios.IOSLauncher"
+}
+
+// Explicitly define repositories for this module to ensure it can resolve dependencies
+repositories {
+    mavenCentral()
+    mavenLocal()
+    google()
+    maven { url = 'https://central.sonatype.com/repository/maven-snapshots/' }
+    maven { url = 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation project(":core")
+    implementation "com.mobidevelop.robovm:robovm-rt:$roboVMVersion"
+    implementation "com.mobidevelop.robovm:robovm-cocoatouch:$roboVMVersion"
+    implementation "com.badlogicgames.gdx:gdx-backend-robovm:$gdxVersion"
+    implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-ios"
+}
+
+launchIPhoneSimulator.dependsOn build
+launchIPadSimulator.dependsOn build
+launchIOSDevice.dependsOn build
+createIPA.dependsOn build
+
+robovm {
+    archs = "thumbv7:arm64"
+}
