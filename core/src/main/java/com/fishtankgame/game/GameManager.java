@@ -273,7 +273,7 @@ public class GameManager {
             pellet.update(delta);
             for (Fish fish : fishList) {
                 if (!fish.isAdult() && fish.getBounds().overlaps(pellet.getBounds())) {
-                    fish.feed(pellet.getFoodType().getGrowthBoost());
+                    fish.feed(pellet.getFoodType().growthBoost());
                     foodPellets.remove(pellet);
                     for (Fish otherFish : fishList) {
                         if (otherFish.getTargetFood() == pellet) otherFish.clearTargetFood();
@@ -393,7 +393,7 @@ public class GameManager {
                     foodPellets.add(new FoodPellet(foodType, bubbleTexture, centerX + offset[0], centerY + offset[1]));
                 }
 
-                // Starfish "flip" would be handled in Fish class or here if we have a way to notify
+                fish.triggerStarfishFlip();
             }
         }
     }
@@ -561,8 +561,8 @@ public class GameManager {
         for (Map.Entry<Food, Integer> entry : foodInventory.entrySet()) {
             Food food = entry.getKey();
             if (food.isPremium() == premiumOnly) {
-                if (food.getGrowthBoost() > highestGrowth) {
-                    highestGrowth = food.getGrowthBoost();
+                if (food.growthBoost() > highestGrowth) {
+                    highestGrowth = food.growthBoost();
                     bestFood = food;
                 }
             }
@@ -602,6 +602,7 @@ public class GameManager {
         List<DecorSave> decor;
         Map<String, Integer> inventory;
         List<EggSave> eggs;
+        List<String> activeFood;
     }
 
     private static class FishSave {
@@ -659,7 +660,7 @@ public class GameManager {
 
         data.inventory = new HashMap<>();
         for (Map.Entry<Food, Integer> entry : foodInventory.entrySet()) {
-            data.inventory.put(entry.getKey().getType(), entry.getValue());
+            data.inventory.put(entry.getKey().type(), entry.getValue());
         }
 
         data.eggs = new ArrayList<>();
@@ -672,6 +673,11 @@ public class GameManager {
             es.x = eo.getPosition().x;
             es.y = eo.getPosition().y;
             data.eggs.add(es);
+        }
+
+        data.activeFood = new ArrayList<>();
+        for (FoodPellet pellet : foodPellets) {
+            data.activeFood.add(pellet.getFoodType().type());
         }
 
         String json = new Gson().toJson(data);
@@ -729,6 +735,16 @@ public class GameManager {
             if (data.eggs != null) {
                 for (EggSave es : data.eggs) {
                     this.eggObjects.add(new EggObject(new Egg(es.breed, es.quantity, es.price, es.premium), eggTexture, es.x, es.y));
+                }
+            }
+
+            this.foodPellets.clear();
+            if (data.activeFood != null) {
+                for (String foodType : data.activeFood) {
+                    Food food = createFoodByType(foodType);
+                    float x = MathUtils.random(tankWidth * 0.2f, tankWidth * 0.8f);
+                    float y = MathUtils.random(480, tankHeight - 16);
+                    foodPellets.add(new FoodPellet(food, bubbleTexture, x, y));
                 }
             }
 

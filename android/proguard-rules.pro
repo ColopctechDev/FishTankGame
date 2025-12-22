@@ -7,6 +7,16 @@
 -keep enum com.badlogic.** { *; }
 -dontwarn com.badlogic.**
 
+-keep class com.badlogic.gdx.scenes.scene2d.ui.** { *; }
+-keep class com.badlogic.gdx.graphics.g2d.** { *; }
+-keep class com.badlogic.gdx.utils.** { *; }
+-keep class com.badlogic.gdx.math.** { *; }
+
+# Specifically for the Interpolation class which often causes this specific crash
+-keep class com.badlogic.gdx.math.Interpolation {
+    public static <fields>;
+}
+
 # Keep your game logic entirely
 -keep class com.fishtankgame.** { *; }
 -keep enum com.fishtankgame.** { *; }

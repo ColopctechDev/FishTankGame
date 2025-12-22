@@ -32,13 +32,13 @@ public class Shop {
         int quantity = 10;
 
         if (food.isPremium()) {
-            if (gameManager.getPearls() >= food.getPrice()) {
-                gameManager.setPearls(gameManager.getPearls() - (int) food.getPrice());
+            if (gameManager.getPearls() >= food.price()) {
+                gameManager.setPearls(gameManager.getPearls() - (int) food.price());
                 gameManager.addFood(food, quantity);
             }
         } else {
-            if (gameManager.getMoney() >= food.getPrice()) {
-                gameManager.setMoney(gameManager.getMoney() - food.getPrice());
+            if (gameManager.getMoney() >= food.price()) {
+                gameManager.setMoney(gameManager.getMoney() - food.price());
                 gameManager.addFood(food, quantity);
             }
         }

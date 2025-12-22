@@ -2,37 +2,9 @@ package com.fishtankgame.model;
 
 import java.util.Objects;
 
-public class Food {
-    private final String type;
-    private final int growthBoost;
-    private final double price;
-    private final boolean isPremium;
-
+public record Food(String type, int growthBoost, double price, boolean isPremium) {
     public Food(String type, int growthBoost, double price) {
         this(type, growthBoost, price, false);
-    }
-
-    public Food(String type, int growthBoost, double price, boolean isPremium) {
-        this.type = type;
-        this.growthBoost = growthBoost;
-        this.price = price;
-        this.isPremium = isPremium;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public int getGrowthBoost() {
-        return growthBoost;
-    }
-
-    public double getPrice() {
-        return price;
-    }
-
-    public boolean isPremium() {
-        return isPremium;
     }
 
     @Override

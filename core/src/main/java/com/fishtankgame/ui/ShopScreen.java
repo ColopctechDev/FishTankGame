@@ -116,6 +116,7 @@ public class ShopScreen extends ScreenAdapter {
         if (isFishBuyMode) {
             Table eggGrid = new Table();
             eggGrid.pad(10);
+            eggGrid.top(); // Ensure alignment starts from top
 
             // First 10 cash breeds (2 rows of 5)
             for (int i = 0; i < cashBreeds.size(); i++) {
@@ -136,7 +137,8 @@ public class ShopScreen extends ScreenAdapter {
                 addEggButton(eggGrid, breed);
             }
 
-            mainFishTable.add(eggGrid).expand().fill();
+            ScrollPane scroll = new ScrollPane(eggGrid, skin);
+            mainFishTable.add(scroll).expand().fill().maxHeight(700);
         } else {
             Table sellGrid = new Table();
             sellGrid.top();

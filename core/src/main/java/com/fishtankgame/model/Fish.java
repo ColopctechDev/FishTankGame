@@ -19,6 +19,8 @@ public class Fish {
     private final Vector2 direction;
     private boolean isAdult;
     private final TextureRegion textureRegion;
+    private TextureRegion secondaryTextureRegion; // For Starfish flip
+    private boolean isUsingSecondaryTexture = false;
     private final Rectangle bounds;
     private FoodPellet targetFood;
     private Fish targetFish;
@@ -85,6 +87,14 @@ public class Fish {
 
         FishBreed breedInfo = FishBreed.fromName(breed);
         this.isPremium = breedInfo.isPremium();
+
+        // Special handling for Starfish secondary texture
+        if (breed.equals("Starfish")) {
+            Texture flipTex = gameManager.getFishTexture("StarfishFlip");
+            if (flipTex != null) {
+                this.secondaryTextureRegion = new TextureRegion(flipTex);
+            }
+        }
 
         // Premium fish scales (Starting size also increased by 33% from 0.08f)
         // Platinum Arowana also follows pearl sizing even if not premium (though it's premium-priced)
@@ -354,6 +364,12 @@ public class Fish {
         bounds.set(newCenterX - finalCollisionWidth / 2, newCenterY - finalCollisionHeight / 2, finalCollisionWidth, finalCollisionHeight);
     }
 
+    public void triggerStarfishFlip() {
+        if (breed.equals("Starfish")) {
+            isUsingSecondaryTexture = !isUsingSecondaryTexture;
+        }
+    }
+
     private void handleArowanaIdle(float delta, float scaledWidth, float scaledHeight, float margin) {
         arowanaChangeHeightTimer -= delta;
         if (arowanaChangeHeightTimer <= 0 || arowanaTargetY == -1) {
@@ -559,8 +575,10 @@ public class Fish {
     }
 
     public void draw(SpriteBatch batch) {
-        if (lastFlipX != textureRegion.isFlipX()) {
-            textureRegion.flip(true, false);
+        TextureRegion currentRegion = (isUsingSecondaryTexture && secondaryTextureRegion != null) ? secondaryTextureRegion : textureRegion;
+
+        if (lastFlipX != currentRegion.isFlipX()) {
+            currentRegion.flip(true, false);
         }
 
         float angle = direction.angleDeg();
@@ -574,8 +592,8 @@ public class Fish {
             }
         }
 
-        batch.draw(textureRegion, position.x, position.y, textureRegion.getRegionWidth() * currentScale / 2, textureRegion.getRegionHeight() * currentScale / 2,
-                textureRegion.getRegionWidth(), textureRegion.getRegionHeight(),
+        batch.draw(currentRegion, position.x, position.y, currentRegion.getRegionWidth() * currentScale / 2, currentRegion.getRegionHeight() * currentScale / 2,
+                currentRegion.getRegionWidth(), currentRegion.getRegionHeight(),
                 currentScale, currentScale, rotation);
     }
 

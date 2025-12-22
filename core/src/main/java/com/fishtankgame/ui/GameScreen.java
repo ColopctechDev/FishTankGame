@@ -18,7 +18,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.fishtankgame.FishTankGame;
@@ -34,7 +33,6 @@ import com.fishtankgame.model.Decor;
 import com.fishtankgame.model.FishBreed;
 
 import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -62,6 +60,8 @@ public class GameScreen extends ScreenAdapter {
 
     private boolean showSplashOnStart = true;
     private final NumberFormat formatter = NumberFormat.getInstance(Locale.US);
+
+    private Dialog splashDialog; // Track the splash dialog
 
     // Easter egg tracking
     private float lastTapX, lastTapY;
@@ -297,49 +297,51 @@ public class GameScreen extends ScreenAdapter {
 
         dialog.getButtonTable().add(okBtn).width(200).height(80).pad(20);
         dialog.getButtonTable().add(cancelBtn).width(200).height(80).pad(20);
-        dialog.show(stage);
+        dialog.show(stage, null);
     }
 
     private void showSplashScreen() {
-        final Dialog dialog = new Dialog("", skin);
-        Table content = dialog.getContentTable();
+        if (splashDialog != null) return;
+
+        splashDialog = new Dialog("", skin);
+        Table content = splashDialog.getContentTable();
         content.pad(100);
 
         // Heading: DIVE INTO THE FUN!
         Label title = new Label("DIVE INTO THE FUN!", skin, "subtitle");
         title.setFontScale(7.0f);
         title.setColor(Color.GOLD);
-        content.add(title).padBottom(80).row();
+        content.add(title).center().padBottom(80).row(); // Explicitly centered
 
         // Subheading 1: Buy & Sell
         Label sub1 = new Label("💰 Buy & Sell:", skin);
         sub1.setFontScale(5.0f);
         sub1.setColor(Color.CYAN);
-        content.add(sub1).left().padBottom(10).row();
+        content.add(sub1).center().padBottom(10).row();
 
         Label desc1 = new Label("Trade fish for profit to upgrade your tank!", skin);
         desc1.setFontScale(2.8f);
-        content.add(desc1).left().padBottom(40).row();
+        content.add(desc1).center().padBottom(40).row();
 
         // Subheading 2: Bubbles
         Label sub2 = new Label("🫧 Bubbles:", skin);
         sub2.setFontScale(5.0f);
         sub2.setColor(Color.CYAN);
-        content.add(sub2).left().padBottom(10).row();
+        content.add(sub2).center().padBottom(10).row();
 
         Label desc2 = new Label("Look for the Scuba Guy to keep your fish happy.", skin);
         desc2.setFontScale(2.8f);
-        content.add(desc2).left().padBottom(40).row();
+        content.add(desc2).center().padBottom(40).row();
 
         // Subheading 3: Free Eggs
         Label sub3 = new Label("🥚 Free Eggs:", skin);
         sub3.setFontScale(5.0f);
         sub3.setColor(Color.CYAN);
-        content.add(sub3).left().padBottom(10).row();
+        content.add(sub3).center().padBottom(10).row();
 
         Label desc3 = new Label("The friendly Octopus has a surprise for you!", skin);
         desc3.setFontScale(2.8f);
-        content.add(desc3).left().padBottom(80).row();
+        content.add(desc3).center().padBottom(80).row();
 
         Label footer = new Label("Click anywhere to play", skin);
         footer.setFontScale(3.5f);
@@ -350,7 +352,7 @@ public class GameScreen extends ScreenAdapter {
         dontShowAgain.getLabel().setFontScale(2.5f);
         content.add(dontShowAgain).center().padBottom(20).row();
 
-        dialog.addListener(new ClickListener() {
+        splashDialog.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 if (dontShowAgain.isChecked()) {
@@ -358,11 +360,12 @@ public class GameScreen extends ScreenAdapter {
                     prefs.putBoolean("showSplash", false);
                     prefs.flush();
                 }
-                dialog.hide();
+                splashDialog.hide();
+                splashDialog = null; // Clear reference
             }
         });
 
-        dialog.show(stage);
+        splashDialog.show(stage, null);
     }
 
     @Override
@@ -391,7 +394,7 @@ public class GameScreen extends ScreenAdapter {
     private void updateInventoryDisplay() {
         StringBuilder inventoryText = new StringBuilder("Inventory:");
         for (Map.Entry<Food, Integer> entry : gameManager.getFoodInventory().entrySet()) {
-            inventoryText.append("\n").append(entry.getKey().getType()).append(": ").append(formatter.format(entry.getValue()));
+            inventoryText.append("\n").append(entry.getKey().type()).append(": ").append(formatter.format(entry.getValue()));
         }
         inventoryLabel.setText(inventoryText.toString());
     }
@@ -458,6 +461,14 @@ public class GameScreen extends ScreenAdapter {
 
         stage.act(delta);
         stage.draw();
+
+        // Ensure splash dialog remains centered
+        if (splashDialog != null && splashDialog.isVisible()) {
+            splashDialog.setPosition(
+                Math.round((stage.getWidth() - splashDialog.getWidth()) / 2),
+                Math.round((stage.getHeight() - splashDialog.getHeight()) / 2)
+            );
+        }
     }
 
     @Override
