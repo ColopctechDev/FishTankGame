@@ -43,6 +43,27 @@ public class Fish {
     private boolean lastFlipX = false;
     private boolean isBehindDecor = false;
 
+    // Tetra specific fields
+    private static float globalTetraMoveTimer = 0;
+    private Vector2 tetraTargetPosition = null;
+    private boolean isTetraFrozen = false;
+
+    // Blue Guppy specific fields
+    private Vector2 guppyCenterSpot = null;
+    private float guppySpiralAngle = 0;
+    private float guppySpiralRadius = 0;
+    private boolean guppyIsSpiraling = false;
+    private int guppySpiralDirection = 1; // 1 for right, -1 for left
+
+    // Gemfish specific fields
+    private Vector2 gemfishTargetSpot = null;
+    private float gemfishWaitTimer = 0;
+    private float gemfishFlipTimer = 0;
+
+    // Platinum Arowana specific fields
+    private float arowanaTargetY = -1;
+    private float arowanaChangeHeightTimer = 0;
+
     public Fish(String name, String breed, double price, float speed, Texture texture, int maxFillValue, GameManager gameManager) {
         this(name, breed, price, speed, texture, maxFillValue, gameManager, null);
     }
@@ -62,7 +83,8 @@ public class Fish {
         this.isPremium = breedInfo.isPremium();
 
         // Premium fish scales (Starting size also increased by 33% from 0.08f)
-        if (this.isPremium) {
+        // Platinum Arowana also follows pearl sizing even if not premium (though it's premium-priced)
+        if (this.isPremium || breed.equals("Platinum Arowana")) {
             this.minScale = 0.106f;
             this.maxScale = 0.2f;
         }
@@ -83,9 +105,22 @@ public class Fish {
         this.bounds = new Rectangle(position.x, position.y, scaledWidth, scaledHeight);
         this.schoolingOffset = new Vector2(MathUtils.random(-100, 100), MathUtils.random(-100, 100));
         this.lastFlipX = direction.x < 0;
+
+        if (breed.equals("Tetra") && globalTetraMoveTimer <= 0) {
+            globalTetraMoveTimer = MathUtils.random(60f, 300f); // 1 to 5 minutes
+        }
     }
 
     public void update(float delta) {
+        if (breed.equals("Tetra") && isAdult()) {
+            globalTetraMoveTimer -= delta;
+            if (globalTetraMoveTimer <= 0) {
+                globalTetraMoveTimer = MathUtils.random(60f, 300f);
+                isTetraFrozen = false;
+                tetraTargetPosition = null;
+            }
+        }
+
         if (chaseCooldown > 0) {
             chaseCooldown -= delta;
         }
@@ -126,6 +161,10 @@ public class Fish {
         if (isCollidingWall) {
             direction.nor();
             isGuardingEgg = false;
+            if (breed.equals("Blue Guppy") && guppyIsSpiraling) {
+                guppyIsSpiraling = false;
+                guppyCenterSpot = null;
+            }
         }
 
         if (!isCollidingWall) {
@@ -133,6 +172,9 @@ public class Fish {
             if (targetFood != null) {
                 direction.set(new Vector2(targetFood.getBounds().x, targetFood.getBounds().y).sub(position)).nor();
                 isGuardingEgg = false;
+                isTetraFrozen = false;
+                guppyIsSpiraling = false;
+                gemfishWaitTimer = 0;
             } else if (targetFish != null) {
                 Vector2 targetPosition = new Vector2(targetFish.getBounds().x, targetFish.getBounds().y);
                 float dist = position.dst(targetPosition);
@@ -208,7 +250,17 @@ public class Fish {
             } else {
                 isGuardingEgg = false;
                 // Priority 2: Idle behaviors
-                if (breed.equals("Tigerfish") && isAdult()) {
+                if (breed.equals("Platinum Arowana") && isAdult()) {
+                    handleArowanaIdle(delta, scaledWidth, scaledHeight, margin);
+                } else if (breed.equals("Gemfish") && isAdult()) {
+                    handleGemfishIdle(delta, scaledWidth, scaledHeight, margin);
+                } else if (breed.equals("Blue Guppy") && isAdult()) {
+                    handleBlueGuppyIdle(delta, scaledWidth, scaledHeight, margin);
+                } else if (breed.equals("Snail")) {
+                    handleSnailIdle(delta, scaledWidth, scaledHeight, margin);
+                } else if (breed.equals("Tetra") && isAdult()) {
+                    handleTetraIdle(delta, scaledWidth, scaledHeight, margin);
+                } else if (breed.equals("Tigerfish") && isAdult()) {
                     handleTigerfishPatrol(delta, scaledWidth, scaledHeight, margin);
                 } else if (breed.equals("Clownfish") && isAdult()) {
                     handleClownfishPatrol(delta, scaledWidth, scaledHeight, margin);
@@ -236,18 +288,24 @@ public class Fish {
         }
 
         float currentSpeed = baseSpeed;
+        if (!isAdult && breed.equals("Gemfish")) {
+            currentSpeed *= 2; // Twice as fast as any other breed at any age (base is already 4.0)
+        }
+
         if (isFighting()) {
             currentSpeed *= 2;
         }
         if (isLeader) {
             currentSpeed *= 1.1f;
         }
-        if (isGuardingEgg) {
+        if (isGuardingEgg || isTetraFrozen || (breed.equals("Gemfish") && gemfishWaitTimer > 0)) {
             currentSpeed = 0;
         }
 
         // Apply movement
-        if (direction.len() > 0) {
+        if (breed.equals("Blue Guppy") && isAdult() && guppyIsSpiraling && !isCollidingWall && targetFood == null) {
+             // Spiral movement is handled inside its own logic by directly modifying position
+        } else if (direction.len() > 0 && currentSpeed > 0) {
             position.add(direction.cpy().nor().scl(currentSpeed * delta * 60));
         }
 
@@ -266,6 +324,127 @@ public class Fish {
         float newCenterX = position.x + scaledWidth / 2;
         float newCenterY = position.y + scaledHeight / 2;
         bounds.set(newCenterX - finalCollisionWidth / 2, newCenterY - finalCollisionHeight / 2, finalCollisionWidth, finalCollisionHeight);
+    }
+
+    private void handleArowanaIdle(float delta, float scaledWidth, float scaledHeight, float margin) {
+        arowanaChangeHeightTimer -= delta;
+        if (arowanaChangeHeightTimer <= 0 || arowanaTargetY == -1) {
+            arowanaChangeHeightTimer = MathUtils.random(60f, 600f); // 1 to 10 minutes
+            arowanaTargetY = MathUtils.random(margin, gameManager.getTankHeight() - scaledHeight - margin);
+        }
+
+        if (Math.abs(position.y - arowanaTargetY) > 5) {
+            // Move to target height
+            direction.set(0, (arowanaTargetY > position.y) ? 1 : -1).nor();
+        } else {
+            // Already at height, swim left/right
+            position.y = arowanaTargetY;
+            direction.y = 0;
+            if (Math.abs(direction.x) < 0.1f) {
+                direction.x = MathUtils.randomBoolean() ? 1 : -1;
+            }
+        }
+    }
+
+    private void handleGemfishIdle(float delta, float scaledWidth, float scaledHeight, float margin) {
+        if (gemfishWaitTimer > 0) {
+            gemfishWaitTimer -= delta;
+            gemfishFlipTimer -= delta;
+            if (gemfishFlipTimer <= 0) {
+                gemfishFlipTimer = 2f;
+                lastFlipX = !lastFlipX; // Force flip
+                direction.x = lastFlipX ? -1 : 1; // Sync direction with flip
+            }
+            if (gemfishWaitTimer <= 0) {
+                gemfishTargetSpot = null;
+            }
+            return;
+        }
+
+        if (gemfishTargetSpot == null) {
+            gemfishTargetSpot = new Vector2(
+                    MathUtils.random(margin, gameManager.getTankWidth() - scaledWidth - margin),
+                    MathUtils.random(margin, gameManager.getTankHeight() - scaledHeight - margin)
+            );
+        }
+
+        float dist = position.dst(gemfishTargetSpot);
+        if (dist > 5) {
+            direction.set(gemfishTargetSpot.cpy().sub(position)).nor();
+        } else {
+            gemfishWaitTimer = MathUtils.random(10f, 60f);
+            gemfishFlipTimer = 2f;
+            direction.set(0, 0);
+        }
+    }
+
+    private void handleBlueGuppyIdle(float delta, float scaledWidth, float scaledHeight, float margin) {
+        if (guppyCenterSpot == null) {
+            // Pick a 20x20 section in the middle of the tank
+            float midX = gameManager.getTankWidth() / 2f;
+            float midY = gameManager.getTankHeight() / 2f;
+            guppyCenterSpot = new Vector2(
+                    MathUtils.random(midX - 10, midX + 10),
+                    MathUtils.random(midY - 10, midY + 10)
+            );
+            guppyIsSpiraling = false;
+        }
+
+        if (!guppyIsSpiraling) {
+            float dist = position.dst(guppyCenterSpot);
+            if (dist > 5) {
+                direction.set(guppyCenterSpot.cpy().sub(position)).nor();
+            } else {
+                guppyIsSpiraling = true;
+                guppySpiralAngle = 0;
+                guppySpiralRadius = 0;
+                guppySpiralDirection = MathUtils.randomBoolean() ? 1 : -1;
+            }
+        } else {
+            // Spiraling logic
+            guppySpiralAngle += delta * 5 * guppySpiralDirection;
+            guppySpiralRadius += delta * 40; // Increase radius over time
+
+            float targetX = guppyCenterSpot.x + MathUtils.cos(guppySpiralAngle) * guppySpiralRadius;
+            float targetY = guppyCenterSpot.y + MathUtils.sin(guppySpiralAngle) * guppySpiralRadius;
+
+            Vector2 newPos = new Vector2(targetX, targetY);
+            direction.set(newPos.cpy().sub(position)).nor();
+            position.set(newPos);
+        }
+    }
+
+    private void handleSnailIdle(float delta, float scaledWidth, float scaledHeight, float margin) {
+        // Lock to bottom margin
+        position.y = margin;
+        direction.y = 0;
+
+        wanderTimer -= delta;
+        if (wanderTimer <= 0) {
+            wanderTimer = MathUtils.random(5f, 15f);
+            direction.x = MathUtils.randomBoolean() ? 1 : -1;
+            isBehindDecor = MathUtils.randomBoolean();
+        }
+        direction.nor();
+    }
+
+    private void handleTetraIdle(float delta, float scaledWidth, float scaledHeight, float margin) {
+        if (isTetraFrozen) return;
+
+        if (tetraTargetPosition == null) {
+            tetraTargetPosition = new Vector2(
+                    MathUtils.random(margin, gameManager.getTankWidth() - scaledWidth - margin),
+                    MathUtils.random(margin, gameManager.getTankHeight() - scaledHeight - margin)
+            );
+        }
+
+        float dist = position.dst(tetraTargetPosition);
+        if (dist > 5) {
+            direction.set(tetraTargetPosition.cpy().sub(position)).nor();
+        } else {
+            isTetraFrozen = true;
+            direction.set(0, 0);
+        }
     }
 
     private void handleTigerfishPatrol(float delta, float scaledWidth, float scaledHeight, float margin) {
@@ -410,6 +589,11 @@ public class Fish {
 
     public void setTargetFood(FoodPellet pellet) {
         this.targetFood = pellet;
+        if (pellet != null) {
+            isTetraFrozen = false;
+            guppyIsSpiraling = false;
+            gemfishWaitTimer = 0;
+        }
     }
 
     public FoodPellet getTargetFood() {

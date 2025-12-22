@@ -3,10 +3,12 @@ package com.fishtankgame.game;
 import com.fishtankgame.model.Decor;
 import com.fishtankgame.model.Egg;
 import com.fishtankgame.model.Fish;
+import com.fishtankgame.model.FishBreed;
 import com.fishtankgame.model.Food;
 
 public class Shop {
     private final GameManager gameManager;
+    private static final double PEARL_TO_MONEY_RATE = 200.0;
 
     public Shop(GameManager gameManager) {
         this.gameManager = gameManager;
@@ -27,7 +29,7 @@ public class Shop {
     }
 
     public void buyFood(Food food) {
-        int quantity = 10; // All food types now give 10 pellets per purchase
+        int quantity = 10;
 
         if (food.isPremium()) {
             if (gameManager.getPearls() >= food.getPrice()) {
@@ -47,7 +49,6 @@ public class Shop {
     }
 
     public void buyDecor(String name, double price, int slotIndex, boolean isPremium) {
-        // Prevent buying multiple Bubblers or Chests or EggPus
         if (slotIndex == -1) {
             for (Decor d : gameManager.getDecorItems()) {
                 if (d.getType().equals(name)) return;
@@ -68,24 +69,21 @@ public class Shop {
     }
 
     public void sellDecor(Decor decor) {
-        // Check if it's a pearl item (Bubbler, EggPus) - maybe sell for pearls?
-        // For now, keep it simple and sell for half price in money or just remove if premium
-        // User didn't specify, but usually premium items might return pearls or just half money.
-        // Let's stick to money for now or check if it was bought with pearls.
-        // Actually, the original code used getPurchasePrice() / 2.0.
-        // If it was a pearl item, maybe return some pearls?
-        // Bubbler was $150, now it's pearls.
-
-        // I'll assume premium items return 0 money for now or stay as they are.
-        // Let's just follow the existing pattern but maybe check if price was high.
-        double sellPrice = Math.floor(decor.getPurchasePrice() / 2.0);
+        double sellPrice;
+        if (decor.getType().equals("Bubbler") || decor.getType().equals("EggPus")) {
+            // Premium decor sells for money at exchange rate
+            sellPrice = Math.floor(decor.getPurchasePrice() * PEARL_TO_MONEY_RATE / 2.0);
+        } else {
+            sellPrice = Math.floor(decor.getPurchasePrice() / 2.0);
+        }
         gameManager.setMoney(gameManager.getMoney() + sellPrice);
         gameManager.getDecorItems().remove(decor);
     }
 
     public Fish sellFish(Fish fish) {
         if (fish.isAdult()) {
-            gameManager.setMoney(gameManager.getMoney() + fish.getPrice());
+            FishBreed breed = FishBreed.fromName(fish.getBreed());
+            gameManager.setMoney(gameManager.getMoney() + breed.getSellPrice());
             gameManager.getFishList().remove(fish);
             return fish;
         }

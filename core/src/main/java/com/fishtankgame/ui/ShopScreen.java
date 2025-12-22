@@ -21,7 +21,12 @@ import com.fishtankgame.game.GameManager;
 import com.fishtankgame.game.Shop;
 import com.fishtankgame.model.Decor;
 import com.fishtankgame.model.Egg;
+import com.fishtankgame.model.Fish;
+import com.fishtankgame.model.FishBreed;
 import com.fishtankgame.model.Food;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ShopScreen extends ScreenAdapter {
     private final FishTankGame game;
@@ -45,12 +50,169 @@ public class ShopScreen extends ScreenAdapter {
     private final TextButton pearlTabButton;
 
     private boolean isDecorBuyMode = true;
+    private boolean isFishBuyMode = true;
 
     private void updateCurrencyLabels() {
         double money = gameManager.getMoney();
         String moneyText = (money == (long) money) ? String.format("%d", (long) money) : String.format("%.2f", money);
         moneyLabel.setText("Funds: $" + moneyText);
         pearlLabel.setText("Pearls: " + gameManager.getPearls());
+    }
+
+    private void refreshFishTab() {
+        if (eggContent == null) return;
+        eggContent.clear();
+
+        Table mainFishTable = new Table();
+        mainFishTable.top();
+
+        // Sub-tabs for Fish: BUY and SELL
+        Table subTabs = new Table();
+
+        TextButton.TextButtonStyle activeStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+        activeStyle.up = skin.newDrawable("white", Color.BLACK);
+        activeStyle.fontColor = Color.WHITE;
+
+        TextButton.TextButtonStyle inactiveStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+        inactiveStyle.up = skin.newDrawable("white", Color.GRAY);
+        inactiveStyle.fontColor = Color.BLACK;
+
+        TextButton buyModeBtn = new TextButton("BUY", isFishBuyMode ? activeStyle : inactiveStyle);
+        TextButton sellModeBtn = new TextButton("SELL", isFishBuyMode ? inactiveStyle : activeStyle);
+
+        float subTabScale = 2.0f;
+        buyModeBtn.getLabel().setFontScale(subTabScale);
+        sellModeBtn.getLabel().setFontScale(subTabScale);
+
+        buyModeBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                isFishBuyMode = true;
+                refreshFishTab();
+            }
+        });
+        sellModeBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                isFishBuyMode = false;
+                refreshFishTab();
+            }
+        });
+
+        subTabs.add(buyModeBtn).width(300).height(80).pad(10);
+        subTabs.add(sellModeBtn).width(300).height(80).pad(10);
+        mainFishTable.add(subTabs).pad(20);
+        mainFishTable.row();
+
+        List<FishBreed> cashBreeds = new ArrayList<>();
+        List<FishBreed> pearlBreeds = new ArrayList<>();
+        for (FishBreed breed : FishBreed.values()) {
+            if (breed.isPremium()) pearlBreeds.add(breed);
+            else cashBreeds.add(breed);
+        }
+
+        if (isFishBuyMode) {
+            Table eggGrid = new Table();
+            eggGrid.pad(10);
+
+            // First 10 cash breeds (2 rows of 5)
+            for (int i = 0; i < cashBreeds.size(); i++) {
+                addEggButton(eggGrid, cashBreeds.get(i));
+                if ((i + 1) % 5 == 0) eggGrid.row();
+            }
+
+            // Final row: Yellow box + 4 Pearl breeds
+            eggGrid.row();
+            TextButton.TextButtonStyle yellowStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+            yellowStyle.up = skin.newDrawable("white", new Color(1f, 0.843f, 0f, 1f));
+            yellowStyle.fontColor = Color.BLACK;
+            TextButton pearlsBox = new TextButton("Pearls!\n--->", yellowStyle);
+            pearlsBox.getLabel().setFontScale(2.5f);
+            eggGrid.add(pearlsBox).width(340).height(160).pad(10);
+
+            for (FishBreed breed : pearlBreeds) {
+                addEggButton(eggGrid, breed);
+            }
+
+            mainFishTable.add(eggGrid).expand().fill();
+        } else {
+            Table sellGrid = new Table();
+            sellGrid.top();
+
+            // First 10 cash breeds (2 rows of 5)
+            for (int i = 0; i < cashBreeds.size(); i++) {
+                addSellButton(sellGrid, cashBreeds.get(i));
+                if ((i + 1) % 5 == 0) sellGrid.row();
+            }
+
+            // Final row: Yellow box + 4 Pearl breeds
+            sellGrid.row();
+            TextButton.TextButtonStyle yellowStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+            yellowStyle.up = skin.newDrawable("white", new Color(1f, 0.843f, 0f, 1f));
+            yellowStyle.fontColor = Color.BLACK;
+            TextButton cashOnlyBox = new TextButton("Sells for\nCASH ONLY", yellowStyle);
+            cashOnlyBox.getLabel().setFontScale(2.5f);
+            sellGrid.add(cashOnlyBox).width(340).height(160).pad(10);
+
+            for (FishBreed breed : pearlBreeds) {
+                addSellButton(sellGrid, breed);
+            }
+
+            ScrollPane scroll = new ScrollPane(sellGrid, skin);
+            mainFishTable.add(scroll).expand().fill().maxHeight(700);
+        }
+
+        eggContent.add(mainFishTable).expand().fill();
+    }
+
+    private void addSellButton(Table table, final FishBreed breed) {
+        int adultCount = 0;
+        for (Fish f : gameManager.getFishList()) {
+            if (f.getBreed().equals(breed.getName()) && f.isAdult()) {
+                adultCount++;
+            }
+        }
+
+        final String breedName = breed.getName();
+        final double sellPrice = breed.getSellPrice();
+        final int finalAdultCount = adultCount;
+
+        TextButton.TextButtonStyle style = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+        if (adultCount > 0) {
+            style.up = skin.newDrawable("white", Color.BLACK);
+            style.fontColor = Color.WHITE;
+        } else {
+            style.up = skin.newDrawable("white", Color.GRAY);
+            style.fontColor = Color.BLACK;
+        }
+
+        String label = breedName + "\n$" + (int)sellPrice + "\n" + adultCount + " Total";
+
+        TextButton sellBtn = new TextButton(label, style);
+        sellBtn.getLabel().setFontScale(2.0f);
+        if (adultCount <= 0) {
+            sellBtn.setDisabled(true);
+        }
+
+        sellBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                if (finalAdultCount > 0) {
+                    for (Fish f : new ArrayList<>(gameManager.getFishList())) {
+                        if (f.getBreed().equals(breedName) && f.isAdult()) {
+                            Fish soldFish = shop.sellFish(f);
+                            if (soldFish != null) {
+                                gameManager.handleSoldFish(soldFish);
+                                updateCurrencyLabels();
+                                refreshFishTab();
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+        table.add(sellBtn).width(340).height(180).pad(10);
     }
 
     private void refreshDecorTab() {
@@ -62,16 +224,21 @@ public class ShopScreen extends ScreenAdapter {
 
         // Sub-tabs for Decor: BUY and SELL
         Table subTabs = new Table();
-        TextButton buyModeBtn = new TextButton("BUY", skin);
-        TextButton sellModeBtn = new TextButton("SELL", skin);
+
+        TextButton.TextButtonStyle activeStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+        activeStyle.up = skin.newDrawable("white", Color.BLACK);
+        activeStyle.fontColor = Color.WHITE;
+
+        TextButton.TextButtonStyle inactiveStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+        inactiveStyle.up = skin.newDrawable("white", Color.GRAY);
+        inactiveStyle.fontColor = Color.BLACK;
+
+        TextButton buyModeBtn = new TextButton("BUY", isDecorBuyMode ? activeStyle : inactiveStyle);
+        TextButton sellModeBtn = new TextButton("SELL", isDecorBuyMode ? inactiveStyle : activeStyle);
 
         float subTabScale = 2.0f;
         buyModeBtn.getLabel().setFontScale(subTabScale);
         sellModeBtn.getLabel().setFontScale(subTabScale);
-
-        // Highlight active sub-tab in Gold
-        if (isDecorBuyMode) buyModeBtn.getLabel().setColor(new Color(1f, 0.843f, 0f, 1f));
-        else sellModeBtn.getLabel().setColor(new Color(1f, 0.843f, 0f, 1f));
 
         buyModeBtn.addListener(new ClickListener() {
             @Override
@@ -169,7 +336,13 @@ public class ShopScreen extends ScreenAdapter {
 
                 if (foundFixed != null) {
                     final Decor decorToSell = foundFixed;
-                    int sellPrice = (int) Math.floor(foundFixed.getPurchasePrice() / 2.0);
+                    int sellPrice;
+                    if (fixedType.equals("Bubbler") || fixedType.equals("EggPus")) {
+                        sellPrice = (int) Math.floor(foundFixed.getPurchasePrice() * 200.0 / 2.0);
+                    } else {
+                        sellPrice = (int) Math.floor(foundFixed.getPurchasePrice() / 2.0);
+                    }
+
                     fStyle.up = skin.newDrawable("white", goldColor);
                     fStyle.fontColor = Color.BLACK;
                     TextButton fixedBtn = new TextButton(displayName + "\nSELL $" + sellPrice, fStyle);
@@ -235,14 +408,14 @@ public class ShopScreen extends ScreenAdapter {
         root.add(header).fillX().row();
 
         // Active Tab Display
-        activeTabLabel = new Label("EGGS", skin);
+        activeTabLabel = new Label("DECOR", skin);
         activeTabLabel.setFontScale(3.2f);
         activeTabLabel.setColor(new Color(1f, 0.843f, 0f, 1f));
         root.add(activeTabLabel).pad(10).row();
 
         // Tabs
         Table tabs = new Table();
-        eggTabButton = new TextButton("EGGS", skin);
+        eggTabButton = new TextButton("FISH & EGGS", skin);
         foodTabButton = new TextButton("FOOD", skin);
         decorTabButton = new TextButton("DECOR", skin);
         pearlTabButton = new TextButton("PEARLS", skin);
@@ -256,7 +429,8 @@ public class ShopScreen extends ScreenAdapter {
         eggTabButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                showTab(eggContent, "EGGS");
+                showTab(eggContent, "FISH & EGGS");
+                refreshFishTab();
             }
         });
         foodTabButton.addListener(new ClickListener() {
@@ -288,21 +462,10 @@ public class ShopScreen extends ScreenAdapter {
         // Main content area
         Stack contentStack = new Stack();
 
-        // --- Egg Content ---
+        // --- Fish & Egg Content ---
         eggContent = new Table();
         eggContent.top();
-        Table eggGrid = new Table();
-        eggGrid.pad(10);
-        addEggButton(eggGrid, "Goldfish", 5);
-        addEggButton(eggGrid, "Blue Tang", 15);
-        addEggButton(eggGrid, "Angelfish", 20);
-        addEggButton(eggGrid, "Betafish", 25);
-        eggGrid.row();
-        addEggButton(eggGrid, "Clownfish", 30);
-        addEggButton(eggGrid, "Tigerfish", 50);
-        addEggButton(eggGrid, "Koi", 100, true);
-        addEggButton(eggGrid, "Rainbowfish", 250, true);
-        eggContent.add(eggGrid).expand().fill();
+        refreshFishTab();
 
         // --- Food Content ---
         foodContent = new Table();
@@ -331,19 +494,24 @@ public class ShopScreen extends ScreenAdapter {
         Table pearlGrid = new Table();
         pearlGrid.pad(10);
 
-        // Column layout: 100, 550, (space), 1200, 2500
+        // Column layout: 100, 550, (Thank You), 1200, 2500
         addPearlPurchaseButton(pearlGrid, 100, "$0.99");
         addPearlPurchaseButton(pearlGrid, 550, "$4.99");
-        pearlGrid.add().width(340); // intentional empty middle column
+
+        TextButton.TextButtonStyle thankStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+        thankStyle.up = skin.newDrawable("white", Color.CLEAR);
+        thankStyle.fontColor = new Color(1f, 0.843f, 0f, 1f); // Gold
+        TextButton thankBtn = new TextButton("Thank\nYOU", thankStyle);
+        thankBtn.getLabel().setFontScale(3.5f);
+        thankBtn.setDisabled(true);
+        pearlGrid.add(thankBtn).width(340).height(160).pad(10);
+
         addPearlPurchaseButton(pearlGrid, 1200, "$9.99");
         addPearlPurchaseButton(pearlGrid, 2500, "$19.99");
 
         pearlGrid.row().padTop(50); // intentional space between upper two rows
 
-        // Column layout: (Popular!!), 4000, 7000, 15000, (empty)
-        // Wait, to keep it centered like requested with a 3rd middle column:
-        // Col 1: Popular!!, Col 2: 4000, Col 3: empty, Col 4: 7000, Col 5: 15000
-
+        // Column layout: (Popular!!), 4000, (for your support), 7000, 15000
         TextButton.TextButtonStyle popStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
         popStyle.up = skin.newDrawable("white", new Color(1f, 0.843f, 0f, 1f));
         popStyle.fontColor = Color.BLACK;
@@ -352,7 +520,15 @@ public class ShopScreen extends ScreenAdapter {
         pearlGrid.add(popularBtn).width(340).height(160).pad(10);
 
         addPearlPurchaseButton(pearlGrid, 4000, "$29.99");
-        pearlGrid.add().width(340); // middle column
+
+        TextButton.TextButtonStyle supportStyle = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
+        supportStyle.up = skin.newDrawable("white", Color.CLEAR);
+        supportStyle.fontColor = new Color(1f, 0.843f, 0f, 1f); // Gold
+        TextButton supportBtn = new TextButton("for your\nSUPPORT", supportStyle);
+        supportBtn.getLabel().setFontScale(2.5f);
+        supportBtn.setDisabled(true);
+        pearlGrid.add(supportBtn).width(340).height(160).pad(10);
+
         addPearlPurchaseButton(pearlGrid, 7000, "$49.99");
         addPearlPurchaseButton(pearlGrid, 15000, "$99.99");
 
@@ -370,8 +546,8 @@ public class ShopScreen extends ScreenAdapter {
         contentStack.add(decorContent);
         contentStack.add(pearlContent);
 
+        eggContent.setVisible(false);
         foodContent.setVisible(false);
-        decorContent.setVisible(false);
         pearlContent.setVisible(false);
 
         root.add(contentStack).expand().fill().row();
@@ -574,13 +750,13 @@ public class ShopScreen extends ScreenAdapter {
         }
     }
 
-    private void addEggButton(Table table, final String breed, final double price) {
-        addEggButton(table, breed, price, false);
-    }
+    private void addEggButton(Table table, final FishBreed breed) {
+        final String breedName = breed.getName();
+        final double price = breed.getBuyPrice();
+        final boolean isPremium = breed.isPremium();
 
-    private void addEggButton(Table table, final String breed, final double price, final boolean isPremium) {
-        String label = breed + "\n" + formatPrice(price) + (isPremium ? " Pearls" : "");
-        if (!isPremium) label = breed + "\n$" + formatPrice(price);
+        String label = breedName + "\n" + formatPrice(price) + (isPremium ? " Pearls" : "");
+        if (!isPremium) label = breedName + "\n$" + formatPrice(price);
 
         TextButton button = new TextButton(label, skin);
         button.getLabel().setFontScale(2.5f);
@@ -600,7 +776,7 @@ public class ShopScreen extends ScreenAdapter {
                         return;
                     }
                 }
-                shop.buyEgg(new Egg(breed, 5, price, isPremium));
+                shop.buyEgg(new Egg(breedName, 5, price, isPremium));
                 updateCurrencyLabels();
             }
         });
